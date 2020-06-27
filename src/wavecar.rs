@@ -1,25 +1,21 @@
-#![allow(unused)]
+#![allow(unused_parens)]
 
-use std::convert::TryInto;
-use std::error::Error;
-use std::fs::{File, read_to_string};
+use std::fs::{File};
 use std::io::{self, ErrorKind as IoErrorKind, Seek, SeekFrom};
-use std::iter::FromIterator;
 use std::path::Path;
 
 use byteorder::{LittleEndian, ReadBytesExt};
-use ndarray::{arr1, arr2, Array1, Array2, Array3, Array4, Axis};
+use ndarray::{Array1, Array2, Array3, Array4, Axis};
 use ndarray_linalg::{Determinant, Inverse, Norm};
-use num::complex::{Complex32, Complex64};
+use num::complex::{Complex64};
+use rayon::prelude::*;
 
 use crate::binary_io::ReadArray;
 use crate::constants::*;
 use crate::error::{
-    self,
     WavecarError,
     ErrorKind as WavecarErrorKind,
 };
-use crate::wavecar::VaspType::GammaHalf;
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum WFPrecisionType {
@@ -115,7 +111,7 @@ impl Wavecar {
             }
         };
 
-        file.seek(SeekFrom::Start(rec_len));
+        file.seek(SeekFrom::Start(rec_len))?;
         let mut dump = vec![0f64; 3];
         file.read_f64_into::<LittleEndian>(&mut dump)?;
         let num_kpoints = dump[0] as u64;
@@ -196,7 +192,7 @@ impl Wavecar {
                 let rec_loc = SeekFrom::Start((rec_idx - 1) * rec_len);
 
                 let mut dump = vec![0f64; (4 + 3 * num_bands as usize)];
-                file.seek(rec_loc);
+                file.seek(rec_loc)?;
                 file.read_f64_into::<LittleEndian>(&mut dump)?;
 
                 if 0 == ispin {
@@ -224,15 +220,6 @@ impl Wavecar {
         (2 + ispin * num_kpoints * (num_bands + 1) +
             ikpoint * (num_bands + 1) +
             iband + 1
-        )
-    }
-
-    #[inline]
-    fn calc_record_index(&self, ispin: u64, ikpoint: u64, iband: u64) -> Result<u64, WavecarError> {
-        self.check_indices(ispin, ikpoint, iband)?;
-        Ok(
-            Self::_calc_record_index(ispin, ikpoint, iband,
-                                     self.num_kpoints, self.num_bands)
         )
     }
 
@@ -340,8 +327,27 @@ impl Wavecar {
                                    kvec: Array1<f64>,
                                    reci_cell: Array2<f64>,
                                    en_cutoff: f64,
-                                   vasp_type: VaspType) {
-        todo!();
+                                   vasp_type: VaspType) -> Vec<Vec<i64>> {
+        let gvecs = Self::_generate_fft_grid_general(ngrid, kvec, reci_cell, en_cutoff);
+        match vasp_type {
+            VaspType::Standard |
+            VaspType::SpinOrbitCoupling => gvecs,
+
+            VaspType::GammaHalf(GammaHalfDirection::X) => {
+                gvecs.into_par_iter().filter(|v|
+                    (v[0] > 0) ||
+                        (v[0] == 0 && v[1] >  0) ||
+                        (v[0] == 0 && v[1] == 0 && v[2] >= 0)
+                ).collect()
+            },
+            VaspType::GammaHalf(GammaHalfDirection::Z) => {
+                gvecs.into_par_iter().filter(|v|
+                    (v[2] > 0) ||
+                        (v[2] == 0 && v[1] >  0) ||
+                        (v[2] == 0 && v[1] == 0 && v[0] >= 0)
+                ).collect()
+            }
+        }
     }
 
     fn _determine_vasp_type(ngrid: Vec<u64>, kvec: Array1<f64>, reci_cell: Array2<f64>,
@@ -356,7 +362,7 @@ impl Wavecar {
         } else {
             if nplw ==
                 // try gamma half x direction, used in vasp 5.4 and higher
-                gvecs.iter().filter(|v|
+                gvecs.par_iter().filter(|v|
                     (v[0] > 0) ||
                         (v[0] == 0 && v[1] >  0) ||
                         (v[0] == 0 && v[1] == 0 && v[2] >= 0)
@@ -367,7 +373,7 @@ impl Wavecar {
 
             } else if nplw ==
                 // try gamma half z direction, used in vasp 5.3 and lower
-                gvecs.iter().filter(|v|
+                gvecs.par_iter().filter(|v|
                     (v[2] > 0) ||
                         (v[2] == 0 && v[1] >  0) ||
                         (v[2] == 0 && v[1] == 0 && v[0] >= 0)
@@ -382,10 +388,10 @@ impl Wavecar {
         }
     }
 
-    pub fn read_wavefunction(&mut self,
-                             ispin: u64,
-                             ikpoint: u64,
-                             iband: u64) -> Result<Array1<Complex64>, WavecarError> {
+    pub fn read_wavefunction_coeffs(&mut self,
+                                    ispin: u64,
+                                    ikpoint: u64,
+                                    iband: u64) -> Result<Array1<Complex64>, WavecarError> {
         let seek_pos = self.calc_record_location(ispin, ikpoint, iband)?;
         self.file.seek(seek_pos).unwrap();
 
@@ -394,7 +400,7 @@ impl Wavecar {
             WFPrecisionType::Complex32 => {
                 let mut ret = vec![0f32; num_plws];
                 self.file.read_f32_into::<LittleEndian>(&mut ret).unwrap();
-                ret.into_iter()
+                ret.into_par_iter()
                     .map(|x| x as f64)
                     .collect::<Vec<_>>()
             },
@@ -411,6 +417,40 @@ impl Wavecar {
                 .collect::<Array1::<Complex64>>()
         )
     }
+
+
+    pub fn get_wavefunction_in_kspace(&mut self,
+                                      ispin: u64,
+                                      ikpoint: u64,
+                                      iband: u64,
+                                      spinor: u64) -> Result<Array3::<Complex64>, WavecarError> {
+        let ngrid = self.ngrid.to_owned();
+        let kvec = self.k_vecs.row(ikpoint as usize).to_owned();
+        let reci_cell = self.get_reci_cell();
+        let en_cutoff = self.en_cutoff;
+        let vasp_type = self.vasp_type;
+
+        let ngx = ngrid[0] as usize;
+        let ngy = ngrid[1] as usize;
+        let ngz = ngrid[2] as usize;
+        let gvecs: Vec<Vec<usize>> = Self::_generate_fft_grid_specific(
+            ngrid, kvec, reci_cell, en_cutoff, vasp_type)
+            .into_par_iter()
+            .map(|v: Vec<i64>| -> Vec<usize> {
+                let gx = if v[0] < 0 { v[0] + ngx as i64 } else { v[0] };
+                let gy = if v[1] < 0 { v[1] + ngx as i64 } else { v[1] };
+                let gz = if v[2] < 0 { v[2] + ngx as i64 } else { v[2] };
+                vec![gx as usize, gy as usize, gz as usize]
+            })
+            .collect();
+
+        let coeffs = self.read_wavefunction_coeffs(ispin, ikpoint, iband)?;
+        let mut wavefunc_in_kspace = Array3::<Complex64>::zeros((ngx, ngy, ngz));
+        gvecs.iter().zip(coeffs.into_iter())
+            .for_each(|(idx, v)| wavefunc_in_kspace[[idx[0], idx[1], idx[2]]] = *v);
+        Ok(wavefunc_in_kspace)
+    }
+
 }
 
 
@@ -418,6 +458,8 @@ impl Wavecar {
 mod tests {
     use super::*;
     use std::cmp::Ordering;
+    use std::convert::TryInto;
+    use ndarray::{arr1, arr2};
 
     fn generate_fft_freq_ref(ngrid: u64) -> Vec<i64> {
         let ngrid: i64 = ngrid.try_into().unwrap();

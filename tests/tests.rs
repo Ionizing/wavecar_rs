@@ -13,3 +13,25 @@ mod h2o_gam_5_2 {
 mod h2o_gam_5_4 {
     mod h2o_gam_5_4;
 }
+
+#[cfg(test)]
+mod test {
+    use rayon::prelude::*;
+
+    #[test]
+    fn test_rayon_preserve_order() {
+        let vec = (0 .. 1<<10).collect::<Vec::<u64>>();
+
+        let result_ref = vec
+            .iter()
+            .map(|x: &u64| x.pow(3))
+            .collect::<Vec<u64>>();
+
+        let result_rayon = vec
+            .par_iter()
+            .map(|x: &u64| x.pow(3))
+            .collect::<Vec<u64>>();
+
+        assert_eq!(result_ref, result_rayon);
+    }
+}
