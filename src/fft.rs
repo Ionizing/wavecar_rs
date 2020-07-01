@@ -1,171 +1,129 @@
-// Copied from ofuton crate: https://github.com/totem3/ofuton
+// fftw wrapper
+// #![allow(unused)]
+#![macro_use]
 
-#![allow(dead_code)]
-extern crate rustfft;
-extern crate ndarray;
+use fftw::plan::*;
+use fftw::types::{c32, Sign, Flag};
+use fftw::types::c64;
+use ndarray::{Array1,Array2,Array3};
 
-use rustfft::{FFTnum, FFTplanner};
-use rustfft::num_complex::Complex;
-use rustfft::num_traits::{Zero};
-use ndarray::{ArrayViewMut, ArrayViewMut2, Dimension};
-
-fn _fft<T: FFTnum>(input: &mut [Complex<T>], output: &mut [Complex<T>], inverse: bool) {
-    let mut planner = FFTplanner::new(inverse);
-    let len = input.len();
-    let fft = planner.plan_fft(len);
-    fft.process(input, output);
-}
-
-pub fn fft<T: FFTnum>(input: &mut [Complex<T>], output: &mut [Complex<T>]) {
-    _fft(input, output, false);
-}
-
-pub fn ifft<T: FFTnum + From<u32>>(input: &mut [Complex<T>], output: &mut [Complex<T>]) {
-    _fft(input, output, true);
-    for v in output.iter_mut() {
-        *v = v.unscale(T::from(input.len() as u32));
-    }
-}
-
-pub fn fft2(input: &mut ArrayViewMut2<Complex<f64>>, output: &mut ArrayViewMut2<Complex<f64>>) {
-    fftnd(input, output, &[0,1]);
-}
-
-pub fn ifft2(input: &mut ArrayViewMut2<Complex<f64>>, output: &mut ArrayViewMut2<Complex<f64>>) {
-    ifftnd(input, output, &[1,0]);
-}
-
-pub fn fftn<D: Dimension>(input: &mut ArrayViewMut<Complex<f64>, D>, output: &mut ArrayViewMut<Complex<f64>, D>, axis: usize) {
-    _fftn(input, output, axis, false);
-}
-
-pub fn ifftn<D: Dimension>(input: &mut ArrayViewMut<Complex<f64>, D>, output: &mut ArrayViewMut<Complex<f64>, D>, axis: usize) {
-    _fftn(input, output, axis, true);
-}
-
-fn _fftn<D: Dimension>(input: &mut ArrayViewMut<Complex<f64>, D>, output: &mut ArrayViewMut<Complex<f64>, D>, axis: usize, inverse: bool) {
-    if inverse {
-        mutate_lane(input, output, ifft, axis)
-    } else {
-        mutate_lane(input, output, fft, axis)
-    }
-}
-
-pub fn fftnd<D: Dimension>(input: &mut ArrayViewMut<Complex<f64>, D>, output: &mut ArrayViewMut<Complex<f64>, D>, axes: &[usize]) {
-    _fftnd(input, output, axes, false);
-}
-
-pub fn ifftnd<D: Dimension>(input: &mut ArrayViewMut<Complex<f64>, D>, output: &mut ArrayViewMut<Complex<f64>, D>, axes: &[usize]) {
-    _fftnd(input, output, axes, true);
-}
-
-fn _fftnd<D: Dimension>(input: &mut ArrayViewMut<Complex<f64>, D>, output: &mut ArrayViewMut<Complex<f64>, D>, axes: &[usize], inverse: bool) {
-    let len = axes.len();
-    for i in 0..len {
-        let axis = axes[i];
-        _fftn(input, output, axis, inverse);
-        if i < len - 1 {
-            let mut outrows = output.genrows_mut().into_iter();
-            for mut row in input.genrows_mut() {
-                let mut outrow = outrows.next().unwrap();
-                row.as_slice_mut().unwrap().copy_from_slice(outrow.as_slice_mut().unwrap());
-            }
-        }
-    }
-}
-
-fn mutate_lane<T: Zero + Clone, D: Dimension>(input: &mut ArrayViewMut<T, D>, output: &mut ArrayViewMut<T, D>, f: fn(&mut [T], &mut [T]) -> (), axis: usize) {
-    if axis > 0 {
-        input.swap_axes(0, axis);
-        output.swap_axes(0, axis);
+macro_rules! fft {
+    ($x:expr) => {
         {
-            let mut outrows = output.genrows_mut().into_iter();
-            for row in input.genrows_mut() {
-                let mut outrow = outrows.next().unwrap();
-                let mut vec = row.to_vec();
-                let mut out = vec![Zero::zero(); outrow.len()];
-                f(&mut vec, &mut out);
-                for i in 0..outrow.len() {
-                    outrow[i] = out.remove(0);
-                }
-            }
-        }
-        input.swap_axes(0, axis);
-        output.swap_axes(0, axis);
-    } else {
-        let mut outrows = output.genrows_mut().into_iter();
-        for mut row in input.genrows_mut() {
-            let mut outrow = outrows.next().unwrap();
-            f(&mut row.as_slice_mut().unwrap(), &mut outrow.as_slice_mut().unwrap());
+            let mut out = $x.clone();
+            C2CPlan64::aligned($x.shape(), Sign::Forward, Flag::MEASURE)
+                .unwrap()
+                .c2c($x.as_slice_mut().unwrap(), out.as_slice_mut().unwrap())
+                .unwrap();
+            out
         }
     }
 }
+
+macro_rules! ifft {
+    ($x:expr) => {
+        {
+            let mut out = $x.clone();
+            let norm_fact = c64::new(out.len() as f64, 0.0);
+            C2CPlan64::aligned($x.shape(), Sign::Backward, Flag::MEASURE)
+                .unwrap()
+                .c2c($x.as_slice_mut().unwrap(), out.as_slice_mut().unwrap())
+                .unwrap();
+            out /= norm_fact;
+            out
+        }
+    }
+}
+
 
 #[cfg(test)]
-mod tests {
-    use super::{fft, ifft, fft2, ifft2};
-    use rustfft::num_complex::Complex;
-    use rustfft::num_traits::Zero;
-    use ndarray::ArrayViewMut;
+mod test {
+    use super::*;
+    use approx::assert_abs_diff_eq;
+    use ndarray::{arr1, arr2, arr3};
+    use std::thread::yield_now;
 
-    fn assert_eq_vecs(a: &[Complex<f64>], b: &[Complex<f64>]) {
-        for (a, b) in a.iter().zip(b) {
-            assert!((a - b).norm() < 0.1f64);
-        }
+    #[test]
+    fn test_fft_macro_1d() {
+        let input = (1..=9)
+            .map(|x| c64::new(x as f64, 0.0))
+            .collect::<Array1::<c64>>();
+        let mut output: Array1<c64> = fft!(input.clone());
+        let expected = &[
+            c64 { re: 45.0, im:   0.0, },
+            c64 { re: -4.5, im:  12.363648387545801, },
+            c64 { re: -4.5, im:   5.362891166673945, },
+            c64 { re: -4.5, im:   2.598076211353316, },
+            c64 { re: -4.5, im:   0.7934714131880916, },
+            c64 { re: -4.5, im:  -0.793471413188092, },
+            c64 { re: -4.5, im:  -2.598076211353316, },
+            c64 { re: -4.5, im:  -5.362891166673945, },
+            c64 { re: -4.5, im: -12.363648387545801, }];
+        output.iter().zip(expected.iter())
+            .for_each(|(x, y)|
+                assert!((x.norm() - y.norm()).abs() < 1e-15));
+
+        let ifft_output: Array1<c64> = ifft!(output);
+        ifft_output.iter().zip(input.iter())
+            .for_each(|(x, y)|
+                assert!((x.norm() - y.norm()).abs() < 1e-15));
     }
 
     #[test]
-    fn test_fft() {
-        let mut input: Vec<Complex<f64>> = vec![1.,2.,3.,4.,5.,6.,7.,8.,9.].into_iter().map(|x| Complex::new(x, 0.)).collect();
-        let mut output = vec![Zero::zero(); 9];
-        fft(&mut input, &mut output);
-        let expected = [Complex::new(45.0,  0.        ), Complex::new(-4.5, 12.36364839), Complex::new(-4.5,   5.36289117),
-                        Complex::new(-4.5,  2.59807621), Complex::new(-4.5,  0.79347141), Complex::new(-4.5,  -0.79347141),
-                        Complex::new(-4.5, -2.59807621), Complex::new(-4.5, -5.36289117), Complex::new(-4.5, -12.36364839)];
-        assert_eq_vecs(&expected, &output);
+    fn test_fft_macro_2d() {
+        let input = (1..=9)
+            .map(|x| c64::new(x as f64, 0.0))
+            .collect::<Vec<_>>();
+        let input = Array2::from_shape_vec((3, 3), input).unwrap();
+        let mut output: Array2<c64> = fft!(input.clone());
+        let expected = arr2(&[
+            [c64 { re: 45.0, im: 0.0, },
+                c64 { re: -4.5, im: 2.598076211353316, },
+                c64 { re: -4.5, im: -2.598076211353316, }],
+            [c64 { re: -13.5, im: 7.794228634059947, },
+                c64 { re: 0.0, im: 0.0, },
+                c64 { re: 0.0, im: 0.0, }],
+            [c64 { re: -13.5, im: -7.794228634059947, },
+                c64 { re: 0.0, im: 0.0, },
+                c64 { re: 0.0, im: 0.0, }]
+        ]);
+        output.iter().zip(expected.iter())
+            .for_each(|(x, y)|
+                assert!((x.norm() - y.norm()).abs() < 1e-15));
+
+        let ifft_output: Array2<c64> = ifft!(output);
+        ifft_output.iter().zip(input.iter())
+            .for_each(|(x, y)|
+                assert!((x.norm() - y.norm()).abs() < 1e-15));
     }
 
     #[test]
-    fn test_inverse_fft() {
-        let mut input: Vec<Complex<f64>> = vec![1.,2.,3.,4.,5.,6.,7.,8.,9.].into_iter().map(|x| Complex::new(x, 0.)).collect();
-        let expected = input.clone();
-        let mut output = vec![Zero::zero(); 9];
-        fft(&mut input, &mut output);
-        let mut output2 = vec![Zero::zero(); 9];
-        ifft(&mut output, &mut output2);
-        assert_eq_vecs(&expected, &output2);
-    }
+    fn test_fft_macro_3d() {
+        let input = (1..=27)
+            .map(|x| c64::new(x as f64, 0.0))
+            .collect::<Vec<_>>();
+        let input = Array3::from_shape_vec((3, 3, 3), input).unwrap();
+        let mut output: Array3<c64> = fft!(input.clone());
+        let expected = arr3(
+            &[[[c64 { re: 378.0, im: 0.0, }, c64 { re: -13.5, im: 7.794228634059948, }, c64 { re: -13.5, im: -7.794228634059948, }],
+                [c64 { re: -40.5, im: 23.38268590217984, }, c64 { re: 0.0, im: 0.0, }, c64 { re: 0.0, im: 0.0, }],
+                [c64 { re: -40.5, im: -23.38268590217984, }, c64 { re: 0.0, im: 0.0, }, c64 { re: 0.0, im: 0.0, }]],
 
-    #[test]
-    fn test_fft2() {
-        let mut input: Vec<Complex<f64>> = vec![1.,2.,3.,4.,5.,6.,7.,8.,9.].into_iter().map(|x| Complex::new(x, 0.)).collect();
-        let mut input_view = ArrayViewMut::from_shape((3,3), &mut input).unwrap();
-        let mut output = vec![Zero::zero(); 9];
-        {
-            let mut output_view = ArrayViewMut::from_shape((3,3), &mut output).unwrap();
-            fft2(&mut input_view, &mut output_view);
-        }
+                [[c64 { re: -121.5, im: 70.14805770653953, }, c64 { re: 0.0, im: 0.0, }, c64 { re: 0.0, im: 0.0, }],
+                    [c64 { re: 0.0, im: 0.0, }, c64 { re: 0.0, im: 0.0, }, c64 { re: 0.0, im: 0.0, }],
+                    [c64 { re: 0.0, im: 0.0, }, c64 { re: 0.0, im: 0.0, }, c64 { re: 0.0, im: 0.0, }]],
 
-        let expected = [Complex::new( 45.0,  0.        ), Complex::new(-4.5, 2.59807621), Complex::new(-4.5, -2.59807621),
-                        Complex::new(-13.5,  7.79422863), Complex::new( 0.0, 0.        ), Complex::new( 0.0,  0.        ),
-                        Complex::new(-13.5, -7.79422863), Complex::new( 0.0, 0.        ), Complex::new( 0.0,  0.        )];
-        assert_eq_vecs(&expected, &output);
-    }
+                [[c64 { re: -121.5, im: -70.14805770653953, }, c64 { re: 0.0, im: 0.0, }, c64 { re: 0.0, im: 0.0, }],
+                    [c64 { re: 0.0, im: 0.0, }, c64 { re: 0.0, im: 0.0, }, c64 { re: 0.0, im: 0.0, }],
+                    [c64 { re: 0.0, im: 0.0, }, c64 { re: 0.0, im: 0.0, }, c64 { re: 0.0, im: 0.0, }]]]
+        );
+        output.iter().zip(expected.iter())
+            .for_each(|(x, y)|
+                assert!((x.norm() - y.norm()).abs() < 1e-15));
 
-    #[test]
-    fn test_inverse_fft2() {
-        let mut input: Vec<Complex<f64>> = vec![1.,2.,3.,4.,5.,6.,7.,8.,9.].into_iter().map(|x| Complex::new(x, 0.)).collect();
-        let mut input_view = ArrayViewMut::from_shape((3,3), &mut input).unwrap();
-        let mut output = vec![Zero::zero(); 9];
-        let mut output_view = ArrayViewMut::from_shape((3,3), &mut output).unwrap();
-        fft2(&mut input_view, &mut output_view);
-        let mut output2 = vec![Zero::zero(); 9];
-        {
-            let mut output2_view = ArrayViewMut::from_shape((3,3), &mut output2).unwrap();
-            ifft2(&mut output_view, &mut output2_view);
-        }
-
-        let expected: Vec<Complex<f64>> = vec![1.,2.,3.,4.,5.,6.,7.,8.,9.].into_iter().map(|x| Complex::new(x, 0.)).collect();
-        assert_eq_vecs(&expected, &output2);
+        let ifft_output: Array3<c64> = ifft!(output);
+        ifft_output.iter().zip(input.iter())
+            .for_each(|(x, y)|
+                assert!((x.norm() - y.norm()).abs() < 1e-15));
     }
 }

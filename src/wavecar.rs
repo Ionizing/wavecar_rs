@@ -5,10 +5,10 @@ use std::io::{self, ErrorKind as IoErrorKind, Seek, SeekFrom};
 use std::path::Path;
 
 use byteorder::{LittleEndian, ReadBytesExt};
-use ndarray::{Array1, Array2, Array3, Array4, Axis};
+use ndarray::{Array1, Array2, Array3};
 use ndarray_linalg::{Determinant, Inverse, Norm};
+use ndarray::parallel::prelude::*;
 use num::complex::{Complex64};
-use rayon::prelude::*;
 
 use crate::binary_io::ReadArray;
 use crate::constants::*;
@@ -36,30 +36,31 @@ pub enum VaspType {
 #[derive(Debug)]
 pub struct Wavecar {
     // f32, f64; gamma only, std, soc
-    file: File,
+    file:               File,
 
-    file_len: u64,
-    rec_len: u64,
-    prec_type: WFPrecisionType,
-    vasp_type: VaspType,
+    file_len:           u64,
+    rec_len:            u64,
+    prec_type:          WFPrecisionType,
+    vasp_type:          VaspType,
 
-    num_spin: u64,
-    num_kpoints: u64,
-    num_bands: u64,
+    num_spin:           u64,
+    num_kpoints:        u64,
+    num_bands:          u64,
 
-    en_cutoff: f64,
-    en_fermi: f64,
+    en_cutoff:          f64,
+    en_fermi:           f64,
 
-    real_cell: Array2<f64>,
-    reci_cell: Array2<f64>,
+    real_cell:          Array2<f64>,
+    reci_cell:          Array2<f64>,
 
-    real_cell_volume: f64,
-    ngrid: Vec<u64>,
+    real_cell_volume:   f64,
+    pub (crate)
+        ngrid:              Vec<u64>,
 
-    num_plws: Vec<u64>,
-    k_vecs: Array2<f64>,
-    band_eigs: Array3<f64>,
-    band_fweight: Array3<f64>,
+    num_plws:           Vec<u64>,
+    k_vecs:             Array2<f64>,
+    band_eigs:          Array3<f64>,
+    band_fweight:       Array3<f64>,
 }
 
 // getters
@@ -323,7 +324,7 @@ impl Wavecar {
             }).collect::<Vec::<Vec::<i64>>>()
     }
 
-    fn _generate_fft_grid_specific(ngrid: Vec<u64>,
+    pub (crate) fn _generate_fft_grid_specific(ngrid: Vec<u64>,
                                    kvec: Array1<f64>,
                                    reci_cell: Array2<f64>,
                                    en_cutoff: f64,
@@ -383,7 +384,7 @@ impl Wavecar {
             } else {
                 Err(
                     WavecarError::from_kind(
-                        WavecarErrorKind::UnkownWavecarType))
+                        WavecarErrorKind::UnknownWaverType))
             }
         }
     }
@@ -418,38 +419,6 @@ impl Wavecar {
         )
     }
 
-
-    pub fn get_wavefunction_in_kspace(&mut self,
-                                      ispin: u64,
-                                      ikpoint: u64,
-                                      iband: u64,
-                                      spinor: u64) -> Result<Array3::<Complex64>, WavecarError> {
-        let ngrid = self.ngrid.to_owned();
-        let kvec = self.k_vecs.row(ikpoint as usize).to_owned();
-        let reci_cell = self.get_reci_cell();
-        let en_cutoff = self.en_cutoff;
-        let vasp_type = self.vasp_type;
-
-        let ngx = ngrid[0] as usize;
-        let ngy = ngrid[1] as usize;
-        let ngz = ngrid[2] as usize;
-        let gvecs: Vec<Vec<usize>> = Self::_generate_fft_grid_specific(
-            ngrid, kvec, reci_cell, en_cutoff, vasp_type)
-            .into_par_iter()
-            .map(|v: Vec<i64>| -> Vec<usize> {
-                let gx = if v[0] < 0 { v[0] + ngx as i64 } else { v[0] };
-                let gy = if v[1] < 0 { v[1] + ngx as i64 } else { v[1] };
-                let gz = if v[2] < 0 { v[2] + ngx as i64 } else { v[2] };
-                vec![gx as usize, gy as usize, gz as usize]
-            })
-            .collect();
-
-        let coeffs = self.read_wavefunction_coeffs(ispin, ikpoint, iband)?;
-        let mut wavefunc_in_kspace = Array3::<Complex64>::zeros((ngx, ngy, ngz));
-        gvecs.iter().zip(coeffs.into_iter())
-            .for_each(|(idx, v)| wavefunc_in_kspace[[idx[0], idx[1], idx[2]]] = *v);
-        Ok(wavefunc_in_kspace)
-    }
 
 }
 

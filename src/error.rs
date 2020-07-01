@@ -22,7 +22,7 @@ pub enum ErrorKind {
     SpinIndexOutbound = 1,
     KPointIndexOutbound,
     BandIndexOutbound,
-    UnkownWavecarType,
+    UnknownWaverType,
 }
 
 impl PartialEq for ErrorKind {
@@ -40,7 +40,7 @@ impl fmt::Display for WavecarError {
             ErrorKind::SpinIndexOutbound => "Spin index outbound",
             ErrorKind::KPointIndexOutbound => "K point index outbound",
             ErrorKind::BandIndexOutbound => "Band index outboud",
-            ErrorKind::UnkownWavecarType => "Unknown WAVECAR type, which should be among std, gam or ncl"
+            ErrorKind::UnknownWaverType => "Unknown WAVECAR type, which should be among std, gam or ncl"
         };
         write!(f, "WavecarIndexError/{:?}: {}", self.kind(), description)
     }
