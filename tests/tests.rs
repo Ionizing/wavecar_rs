@@ -17,7 +17,7 @@ mod h2o_gam_5_4 {
 #[cfg(test)]
 mod test {
     use rayon::prelude::*;
-    use ndarray::Array2;
+    // use ndarray::Array2;
 
     #[test]
     fn test_rayon_preserve_order() {

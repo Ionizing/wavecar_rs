@@ -324,7 +324,7 @@ impl Wavecar {
             }).collect::<Vec::<Vec::<i64>>>()
     }
 
-    pub (crate) fn _generate_fft_grid_specific(ngrid: Vec<u64>,
+    fn _generate_fft_grid_specific(ngrid: Vec<u64>,
                                    kvec: Array1<f64>,
                                    reci_cell: Array2<f64>,
                                    en_cutoff: f64,
@@ -349,6 +349,16 @@ impl Wavecar {
                 ).collect()
             }
         }
+    }
+
+    pub(crate) fn generate_fft_grid(&self, ikpoint: u64) -> Vec<Vec<i64>> {
+        Self::_generate_fft_grid_specific(
+            self.ngrid.clone(),
+            self.k_vecs.row(ikpoint as usize).to_owned(),
+            self.reci_cell.clone(),
+            self.en_cutoff,
+            self.vasp_type
+        )
     }
 
     fn _determine_vasp_type(ngrid: Vec<u64>, kvec: Array1<f64>, reci_cell: Array2<f64>,

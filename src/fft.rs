@@ -1,15 +1,29 @@
 // fftw wrapper
-// #![allow(unused)]
+#![allow(unused)]
 #![macro_use]
 
+use ndarray::Array;
+use fftw::types::*;
 use fftw::plan::*;
-use fftw::types::{c32, Sign, Flag};
-use fftw::types::c64;
-use ndarray::{Array1,Array2,Array3};
+
+// Cannot compile here
+// pub fn fftn<D>(input: &Array<c64, D>) -> &Array<c64, D> {
+//     let mut input = input.clone();
+//     let mut output = input.clone();
+//     C2CPlan64::aligned(input.shape(), Sign::Forward, Flag::MEASURE)
+//         .unwrap()
+//         .c2c(input.as_slice_mut().unwrap(), output.as_slice_mut().unwrap())
+//         .unwrap();
+//     output
+// }
 
 macro_rules! fft {
     ($x:expr) => {
         {
+            use fftw::plan::*;
+            use fftw::types::{c32, Sign, Flag};
+            use fftw::types::c64;
+
             let mut out = $x.clone();
             C2CPlan64::aligned($x.shape(), Sign::Forward, Flag::MEASURE)
                 .unwrap()
@@ -23,6 +37,10 @@ macro_rules! fft {
 macro_rules! ifft {
     ($x:expr) => {
         {
+            use fftw::plan::*;
+            use fftw::types::{c32, Sign, Flag};
+            use fftw::types::c64;
+
             let mut out = $x.clone();
             let norm_fact = c64::new(out.len() as f64, 0.0);
             C2CPlan64::aligned($x.shape(), Sign::Backward, Flag::MEASURE)
@@ -41,7 +59,8 @@ mod test {
     use super::*;
     use approx::assert_abs_diff_eq;
     use ndarray::{arr1, arr2, arr3};
-    use std::thread::yield_now;
+    use ndarray::{Array1,Array2,Array3};
+    use fftw::types::c64;
 
     #[test]
     fn test_fft_macro_1d() {
