@@ -1,6 +1,5 @@
 // fftw wrapper
 #![allow(unused)]
-#![macro_use]
 
 use ndarray::Array;
 use fftw::types::*;
@@ -17,6 +16,7 @@ use fftw::plan::*;
 //     output
 // }
 
+#[macro_export]
 macro_rules! fft {
     ($x:expr) => {
         {
@@ -34,6 +34,7 @@ macro_rules! fft {
     }
 }
 
+#[macro_export]
 macro_rules! ifft {
     ($x:expr) => {
         {
