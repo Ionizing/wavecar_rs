@@ -79,9 +79,9 @@ checksum = "a7b894d1cc14af76750a80f64387f7986fe93a9d3786a9a8926a340ae50b2c51"
 
 [[package]]
 name = "blas-src"
-version = "0.4.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c18550bb5de993fd6ba28b74b05b0aadd693002e566c90cec65636635f570de"
+checksum = "a25f136d1bcc6fc28330077511a0646aaf75bc894e5532b1a33a93d814272328"
 dependencies = [
  "openblas-src",
 ]
@@ -223,6 +223,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "dtoa"
+version = "0.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "134951f4028bdadb9b84baf4232681efbf277da25144b9b0ad65df75946c422b"
+
+[[package]]
 name = "either"
 version = "1.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -360,9 +366,9 @@ dependencies = [
 
 [[package]]
 name = "lapack-src"
-version = "0.4.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb27c57e99dddfc00a37e065f1a6ff8fc96e31f85dd2ca0eefcefc3e09fc2571"
+checksum = "92b348b4b770b1092add976188242941b92272f3bad95cfbacadbfcb0c8923eb"
 dependencies = [
  "openblas-src",
 ]
@@ -496,11 +502,11 @@ dependencies = [
 
 [[package]]
 name = "ndarray-linalg"
-version = "0.12.0"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5329c636ef41b1382e3990c130ae969137df487004eec51a6e40384f2f646a7a"
+checksum = "6892e51e159690d3d3d9fe2b052ff80b638c7d0f7ce634818c84ab7aea09e01c"
 dependencies = [
- "blas-src 0.4.0",
+ "blas-src 0.6.1",
  "cauchy",
  "lapack-src",
  "lapacke",
@@ -618,9 +624,9 @@ checksum = "1ab52be62400ca80aa00285d25253d7f7c437b7375c4de678f5405d3afe82ca5"
 
 [[package]]
 name = "openblas-src"
-version = "0.7.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b3533e568814bee9620fcc529158408384404bae5b277c73c73d66ca03fceb7"
+checksum = "84629d1d4f9f40d3f9e4756dae33c6af50d3c2fcc186558dac65bf55141ade6b"
 
 [[package]]
 name = "pkg-config"
@@ -743,19 +749,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4c691c0e608126e00913e33f0ccf3727d5fc84573623b8d65b2df340b5201783"
 
 [[package]]
-name = "rustfft"
-version = "3.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77008ed59a8923c8b4ac2e5eaa6d28fbe893d3b9515098a4a5fc7767d6430fe5"
-dependencies = [
- "num-complex",
- "num-integer",
- "num-traits",
- "strength_reduce",
- "transpose",
-]
-
-[[package]]
 name = "scopeguard"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -766,12 +759,6 @@ name = "serde"
 version = "1.0.112"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "736aac72d1eafe8e5962d1d1c3d99b0df526015ba40915cb3c49d042e92ec243"
-
-[[package]]
-name = "strength_reduce"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3ff2f71c82567c565ba4b3009a9350a96a7269eaa4001ebedae926230bc2254"
 
 [[package]]
 name = "syn"
@@ -826,12 +813,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "transpose"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "643e21580bb0627c7bb09e5cedbb42c8705b19d012de593ed6b0309270b3cd1e"
-
-[[package]]
 name = "unicode-xid"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -844,17 +825,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a1ca13c08c41c9c3e04224ed9ff80461d97e121589ff27c753a16cb10830ae0f"
 
 [[package]]
+name = "vasp-poscar"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6717f9e00b8899a6a03b12d2d7b37ce03a939ce71f1437868974e64d5b8b1014"
+dependencies = [
+ "dtoa",
+ "failure",
+]
+
+[[package]]
 name = "wavecar_rs"
 version = "0.1.0"
 dependencies = [
- "approx",
  "byteorder",
  "fftw",
  "ndarray 0.13.1",
  "ndarray-linalg",
  "num 0.2.1",
  "rayon",
- "rustfft",
+ "vasp-poscar",
 ]
 
 [[package]]

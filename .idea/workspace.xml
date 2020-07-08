@@ -6,6 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="c4acbc81-4c31-4229-a4e0-b0373ee695c6" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/fft.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/fft.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/utils.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils.rs" afterDir="false" />
@@ -53,7 +55,6 @@
       <option name="channel" value="DEFAULT" />
       <option name="command" value="expand --lib --color=always --theme=GitHub --tests wavecar" />
       <option name="allFeatures" value="false" />
-      <option name="nocapture" value="false" />
       <option name="emulateTerminal" value="false" />
       <option name="backtrace" value="SHORT" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
@@ -66,7 +67,6 @@
       <option name="channel" value="DEFAULT" />
       <option name="command" value="test --package wavecar_rs --lib fft::test::test_fft_macro_1d -- --exact" />
       <option name="allFeatures" value="false" />
-      <option name="nocapture" value="false" />
       <option name="emulateTerminal" value="false" />
       <option name="backtrace" value="SHORT" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
@@ -79,7 +79,6 @@
       <option name="channel" value="DEFAULT" />
       <option name="command" value="test --package wavecar_rs --lib fft::test::test_fft_macro_2d -- --exact" />
       <option name="allFeatures" value="false" />
-      <option name="nocapture" value="false" />
       <option name="emulateTerminal" value="false" />
       <option name="backtrace" value="SHORT" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
@@ -92,7 +91,6 @@
       <option name="channel" value="STABLE" />
       <option name="command" value="run" />
       <option name="allFeatures" value="false" />
-      <option name="nocapture" value="true" />
       <option name="emulateTerminal" value="true" />
       <option name="backtrace" value="SHORT" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
@@ -105,7 +103,6 @@
       <option name="channel" value="DEFAULT" />
       <option name="command" value="test" />
       <option name="allFeatures" value="false" />
-      <option name="nocapture" value="true" />
       <option name="emulateTerminal" value="true" />
       <option name="backtrace" value="SHORT" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
@@ -118,8 +115,8 @@
       <item itemvalue="Cargo Command.run" />
       <item itemvalue="Cargo Command.test" />
       <item itemvalue="Cargo Command.Expand wavecar_rs::wavecar" />
-      <item itemvalue="Cargo Command.Test fft::test::test_fft_macro_2d" />
       <item itemvalue="Cargo Command.Test fft::test::test_fft_macro_1d" />
+      <item itemvalue="Cargo Command.Test fft::test::test_fft_macro_2d" />
     </list>
     <recent_temporary>
       <list>

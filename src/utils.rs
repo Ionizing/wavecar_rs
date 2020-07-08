@@ -1,16 +1,13 @@
-#![allow(unused)]
+#![allow(unused_parens)]
 
 use ndarray::{Array3};
 use num::complex::Complex64;
-use rayon::prelude::*;
+use ndarray::parallel::prelude::*;
 
 use crate::wavecar::*;
 use crate::error::WavecarError;
-#[macro_use]
-use crate::fft;
-#[macro_use]
-use crate::ifft;
-use crate::wavecar::WFPrecisionType::Complex32;
+use crate::ifft; //  ifft!
+use crate::constants::*;
 
 impl Wavecar {
     fn _get_wavefunction_in_realspace_std(&mut self,
@@ -101,7 +98,7 @@ impl Wavecar {
 
         // complement of the grid
         let gvecs_complement = {
-            let ngx = ngx as i64;
+            // let ngx = ngx as i64;
             let ngy = ngy as i64;
             let ngz = ngz as i64;
             let fyv = (0 .. ngy).collect::<Vec<_>>();
@@ -158,7 +155,7 @@ impl Wavecar {
         let gvecs_complement = {
             let ngx = ngx as i64;
             let ngy = ngy as i64;
-            let ngz = ngz as i64;
+            // let ngz = ngz as i64;
 
             let fxv = (0 .. ngx).collect::<Vec<_>>();
             let fyv = (0 .. ngy).collect::<Vec<_>>();
@@ -185,20 +182,6 @@ impl Wavecar {
         ifft!(wavefun_in_kspace)
     }
 
-    fn _get_wavefunction_in_realspace_gam(&mut self,
-                                          ispin: u64,
-                                          ikpoint: u64,
-                                          iband: u64,
-                                          ngrid: Vec<u64>) -> Array3<Complex64> {
-        match self.get_vasp_type() {
-            VaspType::GammaHalf(GammaHalfDirection::X) =>
-                self._get_wavefunction_in_realspace_gam_x(ispin, ikpoint, iband, ngrid),
-            VaspType::GammaHalf(GammaHalfDirection::Z) =>
-                self._get_wavefunction_in_realspace_gam_z(ispin, ikpoint, iband, ngrid),
-            _ => unreachable!(),
-        }
-    }
-
     pub fn get_wavefunction_in_realspace(&mut self,
                                          ispin: u64,
                                          ikpoint: u64,
@@ -223,13 +206,63 @@ impl Wavecar {
             }
         )
     }
+
+    pub fn apply_phase_on_wavefunction(&self,
+                                       wavefun: &mut Array3<Complex64>,
+                                       ikpoint: u64,
+                                       r0: [f64; 3]) -> Result<(), WavecarError> {
+        self.check_kpoint_index(ikpoint)?;
+
+        let ngx = wavefun.shape()[0];
+        let ngy = wavefun.shape()[1];
+        let ngz = wavefun.shape()[2];
+        let kx = self.get_k_vecs()[[ikpoint as usize, 0]];
+        let ky = self.get_k_vecs()[[ikpoint as usize, 1]];
+        let kz = self.get_k_vecs()[[ikpoint as usize, 2]];
+
+        let fx: Vec<usize> = (0 .. ngx).collect();
+        let fy: Vec<usize> = (0 .. ngy).collect();
+        let fz: Vec<usize> = (0 .. ngz).collect();
+
+        let phases_vec = fx.iter().flat_map(|&x| {
+            let fz = &fz;
+            fy.iter().flat_map(move |&y| {
+                let fz = &fz;
+                fz.into_iter().map(move |&z| [x, y, z])
+            }) })
+            // lines in the below equal to
+            // for x in fx {
+            //   for y in fy {
+            //     for z in fz {
+            //       ...
+            // }}}
+            .map(|[x, y, z]| {
+                (x as f64 + r0[0]) * kx +
+                (y as f64 + r0[1]) * ky +
+                (z as f64 + r0[2]) * kz
+            })
+            .map(|v| (Complex64::new(0.0, 1.0) * PI * 2.0 * v).exp() )
+            .collect::<Vec<Complex64>>();
+
+        let phases_vec: Array3<Complex64> =
+            Array3::from_shape_vec((ngx, ngy, ngz), phases_vec).unwrap();
+
+        *wavefun *= &phases_vec;
+        Ok(())
+    }
+
+    pub fn save_wavefun_as_parchg
 }
+
 
 #[cfg(test)]
 mod test {
+    use super::*;
+    use ndarray::arr3;
+
     #[test]
     fn test_fft_grid_complement() {
-        let ngx = 5i64;
+        let _ngx = 5i64;
         let ngy = 6i64;
         let ngz = 7i64;
         // x direction
@@ -246,12 +279,13 @@ mod test {
                     [0, fy, fz]);
             }
         }
-        println!("{:?}", gvecs_complement);
+        // println!("{:?}, size = {}", &gvecs_complement, &gvecs_complement.len());
+        assert_eq!(17, gvecs_complement.len());
     }
 
     #[test]
     fn gvecs_complement_2() {
-        let ngx = 5i64;
+        let _ngx = 5i64;
         let ngy = 6i64;
         let ngz = 7i64;
 
@@ -266,7 +300,8 @@ mod test {
             }
         }
 
-        println!("{:?}, size = {}", &gvecs_complement, gvecs_complement.len());
+        // println!("{:?}, size = {}", &gvecs_complement, gvecs_complement.len());
+        assert_eq!(17, gvecs_complement.len());
 
         let fy = (0 .. ngy).collect::<Vec<_>>();
         let fz = (0 .. ngz).collect::<Vec<_>>();
@@ -279,6 +314,18 @@ mod test {
                 !(ify > 0 || (0 == ify && ifz >= 0))
             })
             .collect::<Vec::<[i64; 3]>>();
-        println!("{:?}", gvecs_complement_2);
+        // println!("{:?}, size = {}", &gvecs_complement_2, gvecs_complement_2.len());
+        assert_eq!(17, gvecs_complement_2.len());
+    }
+
+    #[test]
+    fn test_mul_assign_of_two_matrix() {
+        let mut mat_a = Array3::from_shape_vec((3, 3, 3), ( 0 .. 27).collect::<Vec<u32>>() ).unwrap();
+        let mat_b = Array3::from_shape_vec((3, 3, 3), (27 .. 54).collect::<Vec<u32>>() ).unwrap();
+        mat_a += &mat_b;
+        assert_eq!(mat_a, arr3(&[
+            [[27u32, 29, 31], [33, 35, 37], [39, 41, 43]],
+            [[   45, 47, 49], [51, 53, 55], [57, 59, 61]],
+            [[   63, 65, 67], [69, 71, 73], [75, 77, 79]]]));
     }
 }
