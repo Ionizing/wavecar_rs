@@ -1,5 +1,6 @@
-use std::fmt;
+use crate::wavecar::VaspType;
 use std::error::Error;
+use std::fmt;
 
 #[derive(Clone)]
 pub struct WavecarError {
@@ -13,34 +14,35 @@ impl WavecarError {
     }
 
     pub fn from_kind(error: ErrorKind) -> Self {
-        Self{repr: error}
+        Self { repr: error }
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
 pub enum ErrorKind {
-    SpinIndexOutbound = 1,
+    SpinIndexOutbound,
     KPointIndexOutbound,
     BandIndexOutbound,
-    UnknownWaverType,
+    UnknownWavecarType,
+    UnmatchedWavecarType(VaspType, VaspType),
 }
 
-impl PartialEq for ErrorKind {
-    #[inline(always)]
-    fn eq(&self, rhs: &Self) -> bool {
-        *self as u8 == *rhs as u8
-    }
-}
-
-impl Error for WavecarError { }
+impl Error for WavecarError {}
 
 impl fmt::Display for WavecarError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let description = match self.kind() {
-            ErrorKind::SpinIndexOutbound => "Spin index outbound",
-            ErrorKind::KPointIndexOutbound => "K point index outbound",
-            ErrorKind::BandIndexOutbound => "Band index outboud",
-            ErrorKind::UnknownWaverType => "Unknown WAVECAR type, which should be among std, gam or ncl"
+        let description: String = match self.kind() {
+            ErrorKind::SpinIndexOutbound => "Spin index outbound".into(),
+            ErrorKind::KPointIndexOutbound => "K point index outbound".into(),
+            ErrorKind::BandIndexOutbound => "Band index outboud".into(),
+            ErrorKind::UnknownWavecarType => {
+                "Unknown WAVECAR type, which should be among std, gam or ncl".into()
+            }
+            ErrorKind::UnmatchedWavecarType(t1, t2) => format!(
+                "WAVECAR type <{}> differs from user's input <{}>",
+                t1.to_string(),
+                t2.to_string()
+            ),
         };
         write!(f, "WavecarIndexError/{:?}: {}", self.kind(), description)
     }

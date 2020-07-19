@@ -1,21 +1,19 @@
 #![allow(unused_parens)]
 
-use std::fs::{File};
+use std::fmt;
+use std::fs::File;
 use std::io::{self, ErrorKind as IoErrorKind, Seek, SeekFrom};
 use std::path::Path;
 
 use byteorder::{LittleEndian, ReadBytesExt};
+use ndarray::parallel::prelude::*;
 use ndarray::{Array1, Array2, Array3};
 use ndarray_linalg::{Determinant, Inverse, Norm};
-use ndarray::parallel::prelude::*;
-use num::complex::{Complex64};
+use num::complex::Complex64;
 
 use crate::binary_io::ReadArray;
 use crate::constants::*;
-use crate::error::{
-    WavecarError,
-    ErrorKind as WavecarErrorKind,
-};
+use crate::error::{ErrorKind as WavecarErrorKind, WavecarError};
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum WFPrecisionType {
@@ -23,14 +21,29 @@ pub enum WFPrecisionType {
     Complex64,
 }
 
-#[derive(PartialEq, Debug, Copy, Clone)]
-pub enum GammaHalfDirection { X, Z, }
+#[derive(PartialOrd, PartialEq, Debug, Copy, Clone)]
+pub enum GammaHalfDirection {
+    X,
+    Z,
+}
 
-#[derive(PartialEq, Debug, Copy, Clone)]
+#[derive(PartialOrd, PartialEq, Debug, Copy, Clone)]
 pub enum VaspType {
     Standard,
     GammaHalf(GammaHalfDirection),
     SpinOrbitCoupling,
+}
+
+impl fmt::Display for VaspType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let description = match self {
+            VaspType::Standard => "Standard",
+            VaspType::SpinOrbitCoupling => "SpinOrbitCouplint",
+            VaspType::GammaHalf(GammaHalfDirection::X) => "GammaX",
+            VaspType::GammaHalf(GammaHalfDirection::Z) => "GammaZ",
+        };
+        write!(f, "{}", description)
+    }
 }
 
 #[derive(Debug)]
@@ -83,6 +96,8 @@ impl Wavecar {
     pub fn get_band_fweights(&self) -> &Array3<f64>     { &self.band_fweight }
 }
 
+    pub fn set_vasp_type(&mut self, t: VaspType) { self.vasp_type = t }
+}
 
 impl Wavecar {
     pub fn from_file(path: &Path) -> io::Result<Self> {
@@ -136,7 +151,7 @@ impl Wavecar {
                 ).ceil() as u64
             })
             .map(|x| 2 * x + 1)
-            .collect::<Vec::<u64>>();
+            .collect::<Vec<u64>>();
 
         let (num_plws, k_vecs, band_eigs, band_fweight) =
             Self::_read_band_info(&mut file, num_spin, num_kpoints, num_bands, rec_len)?;
@@ -201,7 +216,7 @@ impl Wavecar {
                     k_vecs.extend_from_slice(&dump[1..4]);
                 }
 
-                let dump = dump[4..].to_vec();  // now dump should be (nbands * 3) long;
+                let dump = dump[4..].to_vec(); // now dump should be (nbands * 3) long;
                 band_eigs.extend(dump.iter().step_by(3));
                 band_fweight.extend(dump[2..].iter().step_by(3));
             }
@@ -279,7 +294,6 @@ impl Wavecar {
         self.check_indices(0, 0, iband)
     }
 
-
     fn _generate_fft_freq(ngrid: u64) -> Vec<i64> {
         // ret = [0 ..= ngrid/2] ++ [(1+ngrid/2-ngrid) ..= -1];
         // eg: ngrid = 11, ret = vec![0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1];
@@ -311,7 +325,6 @@ impl Wavecar {
             //   for y in fy:
             //     for x in fx:
             //       gvecs.push_back(vec![x, y, z])
-
             // k_energy = (G + k)^2 / 2
             // G = gvecs[i], k = kvec in this kpoint
             .filter(|v| {
@@ -368,7 +381,7 @@ impl Wavecar {
 
         if nplw as usize == gvecs.len() {
             Ok(VaspType::Standard)
-        } else if nplw as usize == gvecs.len() * 2 {
+        } else if nplw == gvecs.len() * 2 {
             Ok(VaspType::SpinOrbitCoupling)
         } else {
             if nplw ==
@@ -390,7 +403,6 @@ impl Wavecar {
                         (v[2] == 0 && v[1] == 0 && v[0] >= 0)
                 ).count() {
                 Ok(VaspType::GammaHalf(GammaHalfDirection::Z))
-
             } else {
                 Err(
                     WavecarError::from_kind(
@@ -428,10 +440,7 @@ impl Wavecar {
                 .collect::<Array1::<Complex64>>()
         )
     }
-
-
 }
-
 
 #[cfg(test)]
 mod tests {

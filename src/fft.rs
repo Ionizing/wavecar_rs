@@ -1,7 +1,6 @@
 // fftw wrapper
 // #![allow(unused)]
 
-
 // Cannot compile here
 // pub fn fftn<D>(input: &Array<c64, D>) -> &Array<c64, D> {
 //     let mut input = input.clone();
@@ -15,53 +14,48 @@
 
 #[macro_export]
 macro_rules! fft {
-    ($x:expr) => {
-        {
-            use fftw::plan::*;
-            use fftw::types::{Sign, Flag};
+    ($x:expr) => {{
+        use fftw::plan::*;
+        use fftw::types::{Flag, Sign};
 
-            let mut out = $x.clone();
-            C2CPlan64::aligned($x.shape(), Sign::Forward, Flag::MEASURE)
-                .unwrap()
-                .c2c($x.as_slice_mut().unwrap(), out.as_slice_mut().unwrap())
-                .unwrap();
-            out
-        }
-    }
+        let mut out = $x.clone();
+        C2CPlan64::aligned($x.shape(), Sign::Forward, Flag::MEASURE)
+            .unwrap()
+            .c2c($x.as_slice_mut().unwrap(), out.as_slice_mut().unwrap())
+            .unwrap();
+        out
+    }};
 }
 
 #[macro_export]
 macro_rules! ifft {
-    ($x:expr) => {
-        {
-            use fftw::plan::*;
-            use fftw::types::{Sign, Flag};
-            use fftw::types::c64;
+    ($x:expr) => {{
+        use fftw::plan::*;
+        use fftw::types::c64;
+        use fftw::types::{Flag, Sign};
 
-            let mut out = $x.clone();
-            let norm_fact = c64::new(out.len() as f64, 0.0);
-            C2CPlan64::aligned($x.shape(), Sign::Backward, Flag::MEASURE)
-                .unwrap()
-                .c2c($x.as_slice_mut().unwrap(), out.as_slice_mut().unwrap())
-                .unwrap();
-            out /= norm_fact;
-            out
-        }
-    }
+        let mut out = $x.clone();
+        let norm_fact = c64::new(out.len() as f64, 0.0);
+        C2CPlan64::aligned($x.shape(), Sign::Backward, Flag::MEASURE)
+            .unwrap()
+            .c2c($x.as_slice_mut().unwrap(), out.as_slice_mut().unwrap())
+            .unwrap();
+        out /= norm_fact;
+        out
+    }};
 }
-
 
 #[cfg(test)]
 mod test {
-    use ndarray::{arr2, arr3};
-    use ndarray::{Array1,Array2,Array3};
     use fftw::types::*;
+    use ndarray::{arr2, arr3};
+    use ndarray::{Array1, Array2, Array3};
 
     #[test]
     fn test_fft_macro_1d() {
         let input = (1..=9)
             .map(|x| c64::new(x as f64, 0.0))
-            .collect::<Array1::<c64>>();
+            .collect::<Array1<c64>>();
         let mut output: Array1<c64> = fft!(input.clone());
         let expected = &[
             c64 { re: 45.0, im:   0.0, },
@@ -85,9 +79,7 @@ mod test {
 
     #[test]
     fn test_fft_macro_2d() {
-        let input = (1..=9)
-            .map(|x| c64::new(x as f64, 0.0))
-            .collect::<Vec<_>>();
+        let input = (1..=9).map(|x| c64::new(x as f64, 0.0)).collect::<Vec<_>>();
         let input = Array2::from_shape_vec((3, 3), input).unwrap();
         let mut output: Array2<c64> = fft!(input.clone());
         let expected = arr2(&[
