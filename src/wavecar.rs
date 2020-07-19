@@ -94,9 +94,8 @@ impl Wavecar {
     pub fn get_k_vecs(&self) -> &Array2<f64>            { &self.k_vecs }
     pub fn get_band_eigs(&self) -> &Array3<f64>         { &self.band_eigs }
     pub fn get_band_fweights(&self) -> &Array3<f64>     { &self.band_fweight }
-}
 
-    pub fn set_vasp_type(&mut self, t: VaspType) { self.vasp_type = t }
+    pub fn set_vasp_type(&mut self, t: VaspType)        { self.vasp_type = t }
 }
 
 impl Wavecar {
@@ -406,7 +405,7 @@ impl Wavecar {
             } else {
                 Err(
                     WavecarError::from_kind(
-                        WavecarErrorKind::UnknownWaverType))
+                        WavecarErrorKind::UnknownWavecarType))
             }
         }
     }
