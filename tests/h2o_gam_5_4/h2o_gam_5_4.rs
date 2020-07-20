@@ -14,7 +14,7 @@ mod test {
         path
     }
 
-    fn get_fpath_in_current_dit(fname: &str) -> PathBuf {
+    fn get_fpath_in_current_dir(fname: &str) -> PathBuf {
         let mut path = get_current_dir();
         path.push(fname);
         path
@@ -22,7 +22,7 @@ mod test {
 
     #[test]
     fn test_read_wavecar() -> io::Result<()> {
-        let path = get_fpath_in_current_dit("WAVECAR");
+        let path = get_fpath_in_current_dir("WAVECAR");
         let wavecar = Wavecar::from_file(&path)?;
         println!("{:#?}", wavecar);
         Ok(())
