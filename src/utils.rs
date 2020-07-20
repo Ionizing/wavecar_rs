@@ -129,13 +129,11 @@ impl Wavecar {
         wavefun_in_rspace
     }
 
-    fn _get_wavefunction_in_realspace_gam_z(
-        &mut self,
-        ispin: u64,
-        ikpoint: u64,
-        iband: u64,
-        ngrid: Vec<u64>,
-    ) -> Array3<Complex64> {
+    fn _get_wavefunction_in_realspace_gam_z(&mut self,
+                                            ispin: u64,
+                                            ikpoint: u64,
+                                            iband: u64,
+                                            ngrid: Vec<u64>) -> Array3<Complex64> {
         let ngx = ngrid[0] as usize;
         let ngy = ngrid[1] as usize;
         let ngz = ngrid[2] as usize;
@@ -191,13 +189,12 @@ impl Wavecar {
         ifft!(wavefun_in_kspace)
     }
 
-    pub fn get_wavefunction_in_realspace(
-        &mut self,
-        ispin: u64,
-        ikpoint: u64,
-        iband: u64,
-        ngrid: Vec<u64>,
-    ) -> Result<Array3<Complex64>, WavecarError> {
+    pub fn get_wavefunction_in_realspace(&mut self,
+                                         ispin: u64,
+                                         ikpoint: u64,
+                                         iband: u64,
+                                         ngrid: Vec<u64>)
+                                         -> Result<Array3<Complex64>, WavecarError> {
         if self.get_wavecar_type() == WavecarType::SpinOrbitCoupling {
             self.check_indices(1, ikpoint, iband)?;
         } else {
@@ -220,12 +217,18 @@ impl Wavecar {
         })
     }
 
-    pub fn apply_phase_on_wavefunction(
-        &self,
-        wavefun: &mut Array3<Complex64>,
-        ikpoint: u64,
-        r0: [f64; 3],
-    ) -> Result<(), WavecarError> {
+    pub fn get_wavefunction_in_realspace_dn(&mut self,
+                                            ispin: u64,
+                                            ikpoint: u64,
+                                            iband: u64) -> Result<Array3<Complex64>, WavecarError> {
+        let ngrid = self.ngrid.iter().map(|x| x * 2).collect::<Vec<_>>();
+        self.get_wavefunction_in_realspace(ispin, ikpoint, iband, ngrid)
+    }
+
+    pub fn apply_phase_on_wavefunction( &self,
+                                        wavefun: &mut Array3<Complex64>,
+                                        ikpoint: u64,
+                                        r0: [f64; 3] ) -> Result<(), WavecarError> {
         self.check_kpoint_index(ikpoint)?;
 
         let ngx = wavefun.shape()[0];
@@ -267,7 +270,6 @@ impl Wavecar {
         Ok(())
     }
 
-    // pub fn save_wavefun_as_parchg
 }
 
 #[cfg(test)]
