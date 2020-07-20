@@ -68,7 +68,7 @@ pub struct Wavecar {
 
     real_cell_volume:   f64,
     pub (crate)
-        ngrid:              Vec<u64>,
+        ngrid:          Vec<u64>,
 
     num_plws:           Vec<u64>,
     k_vecs:             Array2<f64>,
@@ -424,7 +424,8 @@ impl Wavecar {
                                                       en_cutoff, t);
         let nplw = nplw as usize;
 
-        if gvecs.len() == nplw {
+        // When it comes to SOC WAVECAR, gvecs is same to std WAVECAR
+        if gvecs.len() == nplw && t != WavecarType::SpinOrbitCoupling {
             return Ok(());
         }
 

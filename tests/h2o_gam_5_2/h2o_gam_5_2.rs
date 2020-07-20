@@ -6,6 +6,8 @@ use wavecar_rs::wavecar::Wavecar;
 #[cfg(test)]
 mod test {
     use super::*;
+    use wavecar_rs::wavecar::{WavecarType, GammaHalfDirection};
+    use wavecar_rs::wavecar::WavecarType::Standard;
     // use core::panicking::panic_fmt;
 
     fn get_current_dir() -> PathBuf {
@@ -26,5 +28,29 @@ mod test {
         let wavecar = Wavecar::from_file(&path)?;
         println!("{:#?}", wavecar);
         Ok(())
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_set_wavecar_type1() {
+        let path = get_fpath_in_current_dir("WAVECAR");
+        let mut wavecar = Wavecar::from_file(&path).unwrap();
+        wavecar.set_wavecar_type(WavecarType::SpinOrbitCoupling);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_set_wavecar_type2() {
+        let path = get_fpath_in_current_dir("WAVECAR");
+        let mut wavecar = Wavecar::from_file(&path).unwrap();
+        wavecar.set_wavecar_type(WavecarType::Standard);
+    }
+
+    #[test]
+    // #[should_panic]
+    fn test_set_wavecar_type3() {
+        let path = get_fpath_in_current_dir("WAVECAR");
+        let mut wavecar = Wavecar::from_file(&path).unwrap();
+        wavecar.set_wavecar_type(WavecarType::GammaHalf(GammaHalfDirection::X));
     }
 }
