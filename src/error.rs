@@ -1,4 +1,4 @@
-use crate::wavecar::VaspType;
+use crate::wavecar::WavecarType;
 use std::error::Error;
 use std::fmt;
 
@@ -24,7 +24,7 @@ pub enum ErrorKind {
     KPointIndexOutbound,
     BandIndexOutbound,
     UnknownWavecarType,
-    UnmatchedWavecarType(VaspType, VaspType),
+    UnmatchedWavecarType(WavecarType, WavecarType),
 }
 
 impl Error for WavecarError {}

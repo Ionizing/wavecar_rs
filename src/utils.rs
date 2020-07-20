@@ -106,7 +106,7 @@ impl Wavecar {
             let fzv = (0 .. ngz).collect::<Vec<_>>();
             fyv.iter().flat_map(|&y| {
                 let fz = &fzv;
-                fz.into_iter().map(move |&z| [0, y, z])
+                fz.iter().map(move |&z| [0, y, z])
             })
                 .filter(|[_, y, z]| {
                     let ify = if *y < ngy / 2 + 1 { *y } else { y - ngy };
@@ -171,7 +171,7 @@ impl Wavecar {
             fxv.iter()
                 .flat_map(|&x| {
                     let fy = &fyv;
-                    fy.into_iter().map(move |&y| [x, y, 0])
+                    fy.iter().map(move |&y| [x, y, 0])
                 })
                 .filter(|[x, y, _]| {
                     let ifx = if *x < ngx / 2 + 1 { *x } else { x - ngx };
@@ -198,23 +198,23 @@ impl Wavecar {
         iband: u64,
         ngrid: Vec<u64>,
     ) -> Result<Array3<Complex64>, WavecarError> {
-        if self.get_vasp_type() == VaspType::SpinOrbitCoupling {
+        if self.get_wavecar_type() == WavecarType::SpinOrbitCoupling {
             self.check_indices(1, ikpoint, iband)?;
         } else {
             self.check_indices(ispin, ikpoint, iband)?;
         }
 
-        Ok(match self.get_vasp_type() {
-            VaspType::Standard => {
+        Ok(match self.get_wavecar_type() {
+            WavecarType::Standard => {
                 self._get_wavefunction_in_realspace_std(ispin, ikpoint, iband, ngrid)
             }
-            VaspType::SpinOrbitCoupling => {
+            WavecarType::SpinOrbitCoupling => {
                 self._get_wavefunction_in_realspace_soc(ispin, ikpoint, iband, ngrid)
             }
-            VaspType::GammaHalf(GammaHalfDirection::X) => {
+            WavecarType::GammaHalf(GammaHalfDirection::X) => {
                 self._get_wavefunction_in_realspace_gam_x(ispin, ikpoint, iband, ngrid)
             }
-            VaspType::GammaHalf(GammaHalfDirection::Z) => {
+            WavecarType::GammaHalf(GammaHalfDirection::Z) => {
                 self._get_wavefunction_in_realspace_gam_z(ispin, ikpoint, iband, ngrid)
             }
         })
@@ -245,7 +245,7 @@ impl Wavecar {
                 let fz = &fz;
                 fy.iter().flat_map(move |&y| {
                     let fz = &fz;
-                    fz.into_iter().map(move |&z| [x, y, z])
+                    fz.iter().map(move |&z| [x, y, z])
                 })
             })
             // lines in the below equal to

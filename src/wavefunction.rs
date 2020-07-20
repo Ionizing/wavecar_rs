@@ -2,10 +2,10 @@ use ndarray::Array3;
 use num::complex::Complex64;
 
 use crate::wavecar::GammaHalfDirection;
-use crate::wavecar::VaspType;
+use crate::wavecar::WavecarType;
 
 pub struct Wavefunction {
-    vasp_type: VaspType,
+    vasp_type: WavecarType,
     ispin: u64,
     ikpoint: u64,
     iband: u64,

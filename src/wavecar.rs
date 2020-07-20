@@ -28,19 +28,19 @@ pub enum GammaHalfDirection {
 }
 
 #[derive(PartialOrd, PartialEq, Debug, Copy, Clone)]
-pub enum VaspType {
+pub enum WavecarType {
     Standard,
     GammaHalf(GammaHalfDirection),
     SpinOrbitCoupling,
 }
 
-impl fmt::Display for VaspType {
+impl fmt::Display for WavecarType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let description = match self {
-            VaspType::Standard => "Standard",
-            VaspType::SpinOrbitCoupling => "SpinOrbitCouplint",
-            VaspType::GammaHalf(GammaHalfDirection::X) => "GammaX",
-            VaspType::GammaHalf(GammaHalfDirection::Z) => "GammaZ",
+            WavecarType::Standard => "Standard",
+            WavecarType::SpinOrbitCoupling => "SpinOrbitCouplint",
+            WavecarType::GammaHalf(GammaHalfDirection::X) => "GammaX",
+            WavecarType::GammaHalf(GammaHalfDirection::Z) => "GammaZ",
         };
         write!(f, "{}", description)
     }
@@ -54,7 +54,7 @@ pub struct Wavecar {
     file_len:           u64,
     rec_len:            u64,
     prec_type:          WFPrecisionType,
-    vasp_type:          VaspType,
+    wavecar_type:       WavecarType,
 
     num_spin:           u64,
     num_kpoints:        u64,
@@ -81,7 +81,7 @@ impl Wavecar {
     pub fn get_wavecar_size(&self) -> u64               { self.file_len }
     pub fn get_record_len(&self) -> u64                 { self.rec_len }
     pub fn get_precision_type(&self) -> WFPrecisionType { self.prec_type }
-    pub fn get_vasp_type(&self) -> VaspType             { self.vasp_type }
+    pub fn get_wavecar_type(&self) -> WavecarType       { self.wavecar_type }
     pub fn get_num_spin(&self) -> u64                   { self.num_spin }
     pub fn get_num_kpoints(&self) -> u64                { self.num_kpoints }
     pub fn get_num_bands(&self) -> u64                  { self.num_bands }
@@ -95,7 +95,7 @@ impl Wavecar {
     pub fn get_band_eigs(&self) -> &Array3<f64>         { &self.band_eigs }
     pub fn get_band_fweights(&self) -> &Array3<f64>     { &self.band_fweight }
 
-    pub fn set_vasp_type(&mut self, t: VaspType)        { self.vasp_type = t }
+    pub fn set_wavecar_type(&mut self, t: WavecarType)        { self.wavecar_type = t }
 }
 
 impl Wavecar {
@@ -155,7 +155,7 @@ impl Wavecar {
         let (num_plws, k_vecs, band_eigs, band_fweight) =
             Self::_read_band_info(&mut file, num_spin, num_kpoints, num_bands, rec_len)?;
 
-        let vasp_type = Self::_determine_vasp_type(ngrid.clone(),
+        let wavecar_type = Self::_determine_wavecar_type(ngrid.clone(),
                                                    k_vecs.row(0).to_owned(),
                                                    reci_cell.clone(),
                                                    en_cutoff,
@@ -167,7 +167,7 @@ impl Wavecar {
             file_len,
             rec_len,
             prec_type,
-            vasp_type,
+            wavecar_type,
 
             num_spin,
             num_kpoints,
@@ -317,7 +317,7 @@ impl Wavecar {
             let fx = &fx;
             fy.iter().flat_map(move |&y| {
                 let fx = &fx;
-                fx.into_iter().map(move |&x| vec![x, y, z])
+                fx.iter().map(move |&x| vec![x, y, z])
             }) })
             // those lines below equal to
             // for z in fz:
@@ -340,20 +340,20 @@ impl Wavecar {
                                    kvec: Array1<f64>,
                                    reci_cell: Array2<f64>,
                                    en_cutoff: f64,
-                                   vasp_type: VaspType) -> Vec<Vec<i64>> {
+                                   wavecar_type: WavecarType) -> Vec<Vec<i64>> {
         let gvecs = Self::_generate_fft_grid_general(ngrid, kvec, reci_cell, en_cutoff);
-        match vasp_type {
-            VaspType::Standard |
-            VaspType::SpinOrbitCoupling => gvecs,
+        match wavecar_type {
+            WavecarType::Standard |
+            WavecarType::SpinOrbitCoupling => gvecs,
 
-            VaspType::GammaHalf(GammaHalfDirection::X) => {
+            WavecarType::GammaHalf(GammaHalfDirection::X) => {
                 gvecs.into_par_iter().filter(|v|
                     (v[0] > 0) ||
                         (v[0] == 0 && v[1] >  0) ||
                         (v[0] == 0 && v[1] == 0 && v[2] >= 0)
                 ).collect()
             },
-            VaspType::GammaHalf(GammaHalfDirection::Z) => {
+            WavecarType::GammaHalf(GammaHalfDirection::Z) => {
                 gvecs.into_par_iter().filter(|v|
                     (v[2] > 0) ||
                         (v[2] == 0 && v[1] >  0) ||
@@ -369,19 +369,19 @@ impl Wavecar {
             self.k_vecs.row(ikpoint as usize).to_owned(),
             self.reci_cell.clone(),
             self.en_cutoff,
-            self.vasp_type
+            self.wavecar_type
         )
     }
 
-    fn _determine_vasp_type(ngrid: Vec<u64>, kvec: Array1<f64>, reci_cell: Array2<f64>,
-                            en_cutoff: f64, nplw: u64) -> Result<VaspType, WavecarError> {
+    fn _determine_wavecar_type(ngrid: Vec<u64>, kvec: Array1<f64>, reci_cell: Array2<f64>,
+                            en_cutoff: f64, nplw: u64) -> Result<WavecarType, WavecarError> {
         let gvecs = Self::_generate_fft_grid_general(ngrid, kvec, reci_cell, en_cutoff);
         let nplw = nplw as usize;
 
-        if nplw as usize == gvecs.len() {
-            Ok(VaspType::Standard)
+        if nplw == gvecs.len() {
+            Ok(WavecarType::Standard)
         } else if nplw == gvecs.len() * 2 {
-            Ok(VaspType::SpinOrbitCoupling)
+            Ok(WavecarType::SpinOrbitCoupling)
         } else {
             if nplw ==
                 // try gamma half x direction, used in vasp 5.4 and higher
@@ -390,7 +390,7 @@ impl Wavecar {
                         (v[0] == 0 && v[1] >  0) ||
                         (v[0] == 0 && v[1] == 0 && v[2] >= 0)
                 ).count() {
-                Ok(VaspType::GammaHalf(GammaHalfDirection::X))
+                Ok(WavecarType::GammaHalf(GammaHalfDirection::X))
                 // Sometimes there is no difference in nplws between vasp5.4 and vasp5.3 or lower
                 // treat as bug, still have no idea about how to solve it.
 
@@ -401,13 +401,45 @@ impl Wavecar {
                         (v[2] == 0 && v[1] >  0) ||
                         (v[2] == 0 && v[1] == 0 && v[0] >= 0)
                 ).count() {
-                Ok(VaspType::GammaHalf(GammaHalfDirection::Z))
+                Ok(WavecarType::GammaHalf(GammaHalfDirection::Z))
             } else {
-                Err(
-                    WavecarError::from_kind(
-                        WavecarErrorKind::UnknownWavecarType))
+                Err(WavecarError::from_kind(
+                    WavecarErrorKind::UnknownWavecarType))
             }
         }
+    }
+
+    fn _check_wavecar_type(ngrid: Vec<u64>, kvec: Array1<f64>, reci_cell: Array2<f64>,
+                        en_cutoff: f64, nplw: u64, t: WavecarType) -> Result<(), WavecarError> {
+        let gvecs = Self::_generate_fft_grid_specific(ngrid, kvec, reci_cell, en_cutoff, t);
+        let nplw = nplw as usize;
+
+        if gvecs.len() == nplw {
+            return Ok(());
+        }
+
+        let suggest_type = if nplw == gvecs.len() * 2 {
+            WavecarType::SpinOrbitCoupling
+        } else {
+            if nplw ==
+                // try gamma half x direction, used in vasp 5.4 and higher
+                gvecs.par_iter().filter(|v|
+                    (v[0] > 0) ||
+                        (v[0] == 0 && v[1] >  0) ||
+                        (v[0] == 0 && v[1] == 0 && v[2] >= 0)
+                ).count() {
+                WavecarType::GammaHalf(GammaHalfDirection::X)
+                // Sometimes there is no difference in nplws between vasp5.4 and vasp5.3 or lower
+                // treat as bug, still have no idea about how to solve it.
+
+            } else {
+                WavecarType::GammaHalf(GammaHalfDirection::Z)
+            }
+        };
+
+        Err(WavecarError::from_kind(
+            WavecarErrorKind::UnmatchedWavecarType(t, suggest_type)
+        ))
     }
 
     pub fn read_wavefunction_coeffs(&mut self,
@@ -480,7 +512,7 @@ mod tests {
     }
 
     #[test]
-    fn test_determine_vasp_type() {
+    fn test_determine_wavecar_type() {
         let kvec = arr1(&[1.0/3.0, 1.0/3.0, 0.0]);
         let ngrid = vec![11u64, 11, 105];
         let reci_cell = arr2(
@@ -489,13 +521,13 @@ mod tests {
                 [0.000000000, 0.000000000, 0.028571429]]);
         let en_cutoff = 323.36125000000004; // little difference from it in OUTCAR: 323.4
 
-        let vasp_type = Wavecar::_determine_vasp_type(ngrid.clone(), kvec.clone(),
+        let wavecar_type = Wavecar::_determine_wavecar_type(ngrid.clone(), kvec.clone(),
                                                       reci_cell.clone(), en_cutoff,
                                                       3981).unwrap();
-        assert_eq!(VaspType::Standard, vasp_type);
+        assert_eq!(WavecarType::Standard, wavecar_type);
 
-        let vasp_type = Wavecar::_determine_vasp_type(ngrid, kvec, reci_cell, en_cutoff,
+        let wavecar_type = Wavecar::_determine_wavecar_type(ngrid, kvec, reci_cell, en_cutoff,
                                                       3981 * 2).unwrap();
-        assert_eq!(VaspType::SpinOrbitCoupling, vasp_type);
+        assert_eq!(WavecarType::SpinOrbitCoupling, wavecar_type);
     }
 }

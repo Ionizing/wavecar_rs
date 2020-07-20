@@ -6,7 +6,10 @@
   <component name="ChangeListManager">
     <list default="true" id="c4acbc81-4c31-4229-a4e0-b0373ee695c6" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/error.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/error.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/wavecar.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/wavecar.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/wavefunction.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/wavefunction.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
