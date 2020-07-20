@@ -27,4 +27,10 @@ mod test {
         println!("{:#?}", wavecar);
         Ok(())
     }
+
+    #[test]
+    // #[should_panic]
+    fn test_set_wavecar_type() {
+
+    }
 }

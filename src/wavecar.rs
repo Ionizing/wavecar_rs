@@ -95,7 +95,10 @@ impl Wavecar {
     pub fn get_band_eigs(&self) -> &Array3<f64>         { &self.band_eigs }
     pub fn get_band_fweights(&self) -> &Array3<f64>     { &self.band_fweight }
 
-    pub fn set_wavecar_type(&mut self, t: WavecarType)        { self.wavecar_type = t }
+    pub fn set_wavecar_type(&mut self, t: WavecarType)  {
+        self.check_wavecar_type(t).unwrap();
+        self.wavecar_type = t;
+    }
 }
 
 impl Wavecar {
@@ -156,10 +159,10 @@ impl Wavecar {
             Self::_read_band_info(&mut file, num_spin, num_kpoints, num_bands, rec_len)?;
 
         let wavecar_type = Self::_determine_wavecar_type(ngrid.clone(),
-                                                   k_vecs.row(0).to_owned(),
-                                                   reci_cell.clone(),
-                                                   en_cutoff,
-                                                   num_plws[0]).unwrap();
+                                                         k_vecs.row(0).to_owned(),
+                                                         reci_cell.clone(),
+                                                         en_cutoff,
+                                                         num_plws[0]).unwrap();
 
         Ok(Self {
             file,
@@ -374,7 +377,7 @@ impl Wavecar {
     }
 
     fn _determine_wavecar_type(ngrid: Vec<u64>, kvec: Array1<f64>, reci_cell: Array2<f64>,
-                            en_cutoff: f64, nplw: u64) -> Result<WavecarType, WavecarError> {
+                               en_cutoff: f64, nplw: u64) -> Result<WavecarType, WavecarError> {
         let gvecs = Self::_generate_fft_grid_general(ngrid, kvec, reci_cell, en_cutoff);
         let nplw = nplw as usize;
 
@@ -409,37 +412,38 @@ impl Wavecar {
         }
     }
 
-    fn _check_wavecar_type(ngrid: Vec<u64>, kvec: Array1<f64>, reci_cell: Array2<f64>,
-                        en_cutoff: f64, nplw: u64, t: WavecarType) -> Result<(), WavecarError> {
-        let gvecs = Self::_generate_fft_grid_specific(ngrid, kvec, reci_cell, en_cutoff, t);
+    fn _check_wavecar_type(ngrid: Vec<u64>,
+                           kvec: Array1<f64>,
+                           reci_cell: Array2<f64>,
+                           en_cutoff: f64,
+                           nplw: u64,
+                           t: WavecarType) -> Result<(), WavecarError> {
+        let gvecs = Self::_generate_fft_grid_specific(ngrid.clone(),
+                                                      kvec.clone(),
+                                                      reci_cell.clone(),
+                                                      en_cutoff, t);
         let nplw = nplw as usize;
 
         if gvecs.len() == nplw {
             return Ok(());
         }
 
-        let suggest_type = if nplw == gvecs.len() * 2 {
-            WavecarType::SpinOrbitCoupling
-        } else {
-            if nplw ==
-                // try gamma half x direction, used in vasp 5.4 and higher
-                gvecs.par_iter().filter(|v|
-                    (v[0] > 0) ||
-                        (v[0] == 0 && v[1] >  0) ||
-                        (v[0] == 0 && v[1] == 0 && v[2] >= 0)
-                ).count() {
-                WavecarType::GammaHalf(GammaHalfDirection::X)
-                // Sometimes there is no difference in nplws between vasp5.4 and vasp5.3 or lower
-                // treat as bug, still have no idea about how to solve it.
-
-            } else {
-                WavecarType::GammaHalf(GammaHalfDirection::Z)
-            }
-        };
+        let suggest_type = Self::_determine_wavecar_type(ngrid, kvec, reci_cell,
+                                                         en_cutoff, nplw as u64)
+            .unwrap();
 
         Err(WavecarError::from_kind(
             WavecarErrorKind::UnmatchedWavecarType(t, suggest_type)
         ))
+    }
+
+    pub fn check_wavecar_type(&self, t: WavecarType) -> Result<(), WavecarError> {
+        Self::_check_wavecar_type(self.ngrid.clone(),
+                                  self.k_vecs.row(0).to_owned(),
+                                  self.reci_cell.clone(),
+                                  self.en_cutoff,
+                                  self.num_plws[0],
+                                  t)
     }
 
     pub fn read_wavefunction_coeffs(&mut self,
