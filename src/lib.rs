@@ -1,3 +1,5 @@
+#![feature(test)]
+
 extern crate byteorder;
 extern crate ndarray;
 extern crate ndarray_linalg;
@@ -10,3 +12,4 @@ mod binary_io;
 mod constants;
 mod fft;
 mod utils;
+mod bench;

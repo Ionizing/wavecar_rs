@@ -164,6 +164,10 @@ impl Wavecar {
                                                          en_cutoff,
                                                          num_plws[0]).unwrap();
 
+        if WavecarType::SpinOrbitCoupling == wavecar_type {
+            // band_eigs =
+        }
+
         Ok(Self {
             file,
 

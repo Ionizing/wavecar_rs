@@ -8,6 +8,7 @@ use crate::constants::*;
 use crate::error::WavecarError;
 use crate::ifft; //  ifft!
 use crate::wavecar::*;
+use crate::wavefunction::Wavefunction;
 
 impl Wavecar {
     fn _get_wavefunction_in_realspace_std(&mut self,
@@ -194,80 +195,56 @@ impl Wavecar {
                                          ikpoint: u64,
                                          iband: u64,
                                          ngrid: Vec<u64>)
-                                         -> Result<Array3<Complex64>, WavecarError> {
+                                         -> Result<Wavefunction, WavecarError> {
         if self.get_wavecar_type() == WavecarType::SpinOrbitCoupling {
             self.check_indices(1, ikpoint, iband)?;
         } else {
             self.check_indices(ispin, ikpoint, iband)?;
         }
 
-        Ok(match self.get_wavecar_type() {
+        let data = match self.get_wavecar_type() {
             WavecarType::Standard => {
-                self._get_wavefunction_in_realspace_std(ispin, ikpoint, iband, ngrid)
+                self._get_wavefunction_in_realspace_std(ispin, ikpoint, iband, ngrid.clone())
             }
             WavecarType::SpinOrbitCoupling => {
-                self._get_wavefunction_in_realspace_soc(ispin, ikpoint, iband, ngrid)
+                self._get_wavefunction_in_realspace_soc(ispin, ikpoint, iband, ngrid.clone())
             }
             WavecarType::GammaHalf(GammaHalfDirection::X) => {
-                self._get_wavefunction_in_realspace_gam_x(ispin, ikpoint, iband, ngrid)
+                self._get_wavefunction_in_realspace_gam_x(ispin, ikpoint, iband, ngrid.clone())
             }
             WavecarType::GammaHalf(GammaHalfDirection::Z) => {
-                self._get_wavefunction_in_realspace_gam_z(ispin, ikpoint, iband, ngrid)
+                self._get_wavefunction_in_realspace_gam_z(ispin, ikpoint, iband, ngrid.clone())
             }
-        })
+        };
+
+        let wavecar_type = self.get_wavecar_type();
+        let real_cell = self.get_real_cell();
+        let eigen_val = self.get_band_eigs()[[ispin as usize, ikpoint as usize, iband as usize]];
+        let kvec = self.get_k_vecs().row(ikpoint as usize).to_vec();
+
+        Ok(
+            Wavefunction::new(
+                wavecar_type,
+                ispin,
+                ikpoint,
+                iband,
+
+                real_cell,
+                eigen_val,
+
+                kvec,
+                ngrid,
+                data
+            )
+        )
     }
 
     pub fn get_wavefunction_in_realspace_dn(&mut self,
                                             ispin: u64,
                                             ikpoint: u64,
-                                            iband: u64) -> Result<Array3<Complex64>, WavecarError> {
+                                            iband: u64) -> Result<Wavefunction, WavecarError> {
         let ngrid = self.ngrid.iter().map(|x| x * 2).collect::<Vec<_>>();
         self.get_wavefunction_in_realspace(ispin, ikpoint, iband, ngrid)
-    }
-
-    pub fn apply_phase_on_wavefunction( &self,
-                                        wavefun: &mut Array3<Complex64>,
-                                        ikpoint: u64,
-                                        r0: [f64; 3] ) -> Result<(), WavecarError> {
-        self.check_kpoint_index(ikpoint)?;
-
-        let ngx = wavefun.shape()[0];
-        let ngy = wavefun.shape()[1];
-        let ngz = wavefun.shape()[2];
-        let kx = self.get_k_vecs()[[ikpoint as usize, 0]];
-        let ky = self.get_k_vecs()[[ikpoint as usize, 1]];
-        let kz = self.get_k_vecs()[[ikpoint as usize, 2]];
-
-        let fx: Vec<usize> = (0..ngx).collect();
-        let fy: Vec<usize> = (0..ngy).collect();
-        let fz: Vec<usize> = (0..ngz).collect();
-
-        let phases_vec = fx
-            .iter()
-            .flat_map(|&x| {
-                let fz = &fz;
-                fy.iter().flat_map(move |&y| {
-                    let fz = &fz;
-                    fz.iter().map(move |&z| [x, y, z])
-                })
-            })
-            // lines in the below equal to
-            // for x in fx {
-            //   for y in fy {
-            //     for z in fz {
-            //       ...
-            // }}}
-            .map(|[x, y, z]| {
-                (x as f64 + r0[0]) * kx + (y as f64 + r0[1]) * ky + (z as f64 + r0[2]) * kz
-            })
-            .map(|v| (Complex64::new(0.0, 1.0) * PI * 2.0 * v).exp())
-            .collect::<Vec<Complex64>>();
-
-        let phases_vec: Array3<Complex64> =
-            Array3::from_shape_vec((ngx, ngy, ngz), phases_vec).unwrap();
-
-        *wavefun *= &phases_vec;
-        Ok(())
     }
 
 }
