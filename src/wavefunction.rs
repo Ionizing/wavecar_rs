@@ -4,6 +4,7 @@ use ndarray::Array3;
 use ndarray::Array2;
 use num::complex::Complex64;
 use ndarray_linalg::norm::Norm;
+use rayon::prelude::*;
 
 use vasp_poscar::Poscar;
 use vaspchg_rs::{
@@ -110,13 +111,28 @@ impl Wavefunction {
 
     pub fn normalize(&mut self) -> &mut Self {
         let norm = self.data.norm();
-        self.data.par_mapv_inplace( |v| v.unscale(norm) );
+        self.data.par_mapv_inplace(|v| v.unscale(norm));
         self
     }
 
-    // pub fn into_charge_density(&self) -> Array3<f64> {
-    //     let mut ret = self.data.clone();
-    //     ret.par_mapv_inplace(|v| v.norm_sqr());
-    //     ret.into()
-    // }
+    pub fn get_charge_density(&self) -> Array3<f64> {
+        let shape = self.data.shape();
+        let vec = self.data.par_iter()
+            .map(|v: &Complex64| v.norm_sqr())
+            .collect::<Vec<f64>>();
+        Array3::from_shape_vec((shape[0], shape[1], shape[2]), vec)
+            .unwrap()
+    }
+
+    pub fn get_wavefun_realgrid(&self) -> Array3<f64> {
+        todo!();
+    }
+
+    pub fn get_wavefun_imagegrid(&self) -> Array3<f64> {
+        todo!();
+    }
+
+    pub fn into_parchg_obj(self, poscar: &Poscar) -> ChgBase {
+        todo!();
+    }
 }
