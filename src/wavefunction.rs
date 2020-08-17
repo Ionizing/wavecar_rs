@@ -1,8 +1,15 @@
+#![allow(unused)]
+
 use ndarray::Array3;
 use ndarray::Array2;
-use ndarray::parallel::prelude::*;
 use num::complex::Complex64;
 use ndarray_linalg::norm::Norm;
+
+use vasp_poscar::Poscar;
+use vaspchg_rs::{
+    ChgType,
+    ChgBase,
+};
 
 // use crate::utils::*;
 use crate::wavecar::*;
@@ -60,7 +67,7 @@ impl Wavefunction {
         }
     }
 
-    pub fn apply_phase(mut self, r0: &[f64; 3]) -> Wavefunction {
+    pub fn apply_phase(&mut self, r0: &[f64; 3]) -> &mut Self {
         let ngx = self.data.shape()[0];
         let ngy = self.data.shape()[1];
         let ngz = self.data.shape()[2];
@@ -101,9 +108,9 @@ impl Wavefunction {
         self
     }
 
-    pub fn nomalize(mut self) -> Self {
+    pub fn normalize(&mut self) -> &mut Self {
         let norm = self.data.norm();
-        self.data /= Complex64::new(norm, 0.0);
+        self.data.par_mapv_inplace( |v| v.unscale(norm) );
         self
     }
 
@@ -113,17 +120,3 @@ impl Wavefunction {
     //     ret.into()
     // }
 }
-
-impl Into<Array3<Complex64>> for Wavefunction {
-    fn into(self) -> Array3<Complex64> {
-        self.data
-    }
-}
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use test::Bencher;
-//     use ndarray_linalg::generate::random;
-//
-// }

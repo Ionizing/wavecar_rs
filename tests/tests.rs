@@ -20,3 +20,13 @@ mod h2o_gam_5_4 { mod h2o_gam_5_4; }
 //     }
 //
 // }
+
+#[macro_export]
+macro_rules! get_fpath_in_current_dir {
+    ($fname:expr) => {{
+        let mut path = PathBuf::from(file!());
+        path.pop();
+        path.push($fname);
+        path
+    }}
+}

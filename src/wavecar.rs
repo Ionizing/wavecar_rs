@@ -1,4 +1,4 @@
-#![allow(unused_parens)]
+#![allow(unused)]
 
 use std::fmt;
 use std::fs::File;
@@ -95,9 +95,10 @@ impl Wavecar {
     pub fn get_band_eigs(&self) -> &Array3<f64>         { &self.band_eigs }
     pub fn get_band_fweights(&self) -> &Array3<f64>     { &self.band_fweight }
 
-    pub fn set_wavecar_type(&mut self, t: WavecarType)  {
+    pub fn set_wavecar_type(&mut self, t: WavecarType) -> &mut Self {
         self.check_wavecar_type(t).unwrap();
         self.wavecar_type = t;
+        self
     }
 }
 
@@ -477,7 +478,7 @@ impl Wavecar {
         Ok(
             dump.chunks_exact(2)
                 .map(|v| Complex64::new(v[0], v[1]))
-                .collect::<Array1::<Complex64>>()
+                .collect::<Array1<Complex64>>()
         )
     }
 }

@@ -1,4 +1,4 @@
-#![allow(unused_parens)]
+#![allow(unused)]
 
 use ndarray::parallel::prelude::*;
 use ndarray::Array3;
@@ -122,7 +122,8 @@ impl Wavecar {
         gvecs_complement
             .into_iter()
             .for_each(|(a, b)| wavefun_in_kspace[a] = wavefun_in_kspace[b].conj());
-        wavefun_in_kspace /= Complex64::new(f64::sqrt(2.0), 0.0);
+        // wavefun_in_kspace /= Complex64::new(f64::sqrt(2.0), 0.0);
+        wavefun_in_kspace.par_mapv_inplace(|v| v.unscale(f64::sqrt(2.0)) );
         wavefun_in_kspace[[0, 0, 0]] *= Complex64::new(f64::sqrt(2.0), 0.0);
         wavefun_in_kspace.swap_axes(0, 2);
         let mut wavefun_in_rspace = ifft!(wavefun_in_kspace);
@@ -185,7 +186,8 @@ impl Wavecar {
         gvecs_complement
             .into_iter()
             .for_each(|(a, b)| wavefun_in_kspace[a] = wavefun_in_kspace[b].conj());
-        wavefun_in_kspace /= Complex64::new(f64::sqrt(2.0), 0.0);
+        // wavefun_in_kspace /= Complex64::new(f64::sqrt(2.0), 0.0);
+        wavefun_in_kspace.par_mapv_inplace(|v| v.unscale(f64::sqrt(2.0)));
         wavefun_in_kspace[[0, 0, 0]] *= Complex64::new(f64::sqrt(2.0), 0.0);
         ifft!(wavefun_in_kspace)
     }
@@ -239,7 +241,7 @@ impl Wavecar {
         )
     }
 
-    pub fn get_wavefunction_in_realspace_dn(&mut self,
+    pub fn get_wavefunction_in_realspace_default_ngrid(&mut self,
                                             ispin: u64,
                                             ikpoint: u64,
                                             iband: u64) -> Result<Wavefunction, WavecarError> {

@@ -1,4 +1,4 @@
-#![feature(test)]
+// #![feature(test)]
 
 extern crate byteorder;
 extern crate ndarray;
@@ -12,4 +12,4 @@ mod binary_io;
 mod constants;
 mod fft;
 mod utils;
-mod bench;
+// mod bench;
