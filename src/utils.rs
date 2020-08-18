@@ -51,8 +51,8 @@ impl Wavecar {
             .into_par_iter()
             .map(|v: Vec<i64>| -> [usize; 3] {
                 let gx = if v[0] < 0 { v[0] + ngx as i64 } else { v[0] };
-                let gy = if v[1] < 1 { v[0] + ngx as i64 } else { v[1] };
-                let gz = if v[2] < 2 { v[2] + ngx as i64 } else { v[2] };
+                let gy = if v[1] < 0 { v[1] + ngx as i64 } else { v[1] };
+                let gz = if v[2] < 0 { v[2] + ngx as i64 } else { v[2] };
                 [gx as usize, gy as usize, gz as usize]
             })
             .collect();
@@ -152,13 +152,9 @@ impl Wavecar {
             })
             .collect();
 
-        let coeffs = self
-            .read_wavefunction_coeffs(ispin, ikpoint, iband)
-            .unwrap();
-        let mut wavefun_in_kspace = Array3::<Complex64>::zeros((ngx / 2 + 1, ngy, ngz));
-        gvecs
-            .into_iter()
-            .zip(coeffs.into_iter())
+        let coeffs = self .read_wavefunction_coeffs(ispin, ikpoint, iband) .unwrap();
+        let mut wavefun_in_kspace = Array3::<Complex64>::zeros((ngx, ngy, ngz/2 + 1));
+        gvecs.into_iter().zip(coeffs.into_iter())
             .for_each(|(idx, v)| wavefun_in_kspace[idx] = *v);
 
         let gvecs_complement = {
@@ -169,8 +165,7 @@ impl Wavecar {
             let fxv = (0..ngx).collect::<Vec<_>>();
             let fyv = (0..ngy).collect::<Vec<_>>();
 
-            fxv.iter()
-                .flat_map(|&x| {
+            fxv.iter().flat_map(|&x| {
                     let fy = &fyv;
                     fy.iter().map(move |&y| [x, y, 0])
                 })
@@ -200,7 +195,7 @@ impl Wavecar {
                                          ngrid: Vec<u64>)
                                          -> Result<Wavefunction, WavecarError> {
         if self.get_wavecar_type() == WavecarType::SpinOrbitCoupling {
-            self.check_indices(1, ikpoint, iband)?;
+            self.check_indices(0, ikpoint, iband)?;
         } else {
             self.check_indices(ispin, ikpoint, iband)?;
         }
