@@ -87,8 +87,8 @@ impl Wavecar {
             .into_par_iter()
             .map(|v: Vec<i64>| -> [usize; 3] {
                 let gx = if v[0] < 0 { v[0] + ngx as i64 } else { v[0] };
-                let gy = if v[1] < 1 { v[1] + ngy as i64 } else { v[1] };
-                let gz = if v[2] < 2 { v[2] + ngz as i64 } else { v[2] };
+                let gy = if v[1] < 0 { v[1] + ngy as i64 } else { v[1] };
+                let gz = if v[2] < 0 { v[2] + ngz as i64 } else { v[2] };
                 [gx as usize, gy as usize, gz as usize]
             })
             .collect();
@@ -115,7 +115,7 @@ impl Wavecar {
                     !(ify > 0 || (0 == ify && ifz >= 0))
                 })
                 .map(|[x, y, z]| [x as usize, y as usize, z as usize])
-                .map(|[x, y, z]| ([x, y, z], [x, ngy as usize - y, ngz as usize - z]))
+                .map(|[x, y, z]| ([x, y, z], [x, ngy as usize - y - 1, ngz as usize - z - 1]))
                 .collect::<Vec<([usize; 3], [usize; 3])>>()
         };
 
@@ -128,7 +128,8 @@ impl Wavecar {
         wavefun_in_kspace.swap_axes(0, 2);
         let mut wavefun_in_rspace = ifft!(wavefun_in_kspace);
         wavefun_in_rspace.swap_axes(0, 2);
-        wavefun_in_rspace
+        let ret = wavefun_in_rspace.as_standard_layout().into_owned();
+        ret
     }
 
     fn _get_wavefunction_in_realspace_gam_z(&mut self,
@@ -145,8 +146,8 @@ impl Wavecar {
             .into_par_iter()
             .map(|v: Vec<i64>| -> [usize; 3] {
                 let gx = if v[0] < 0 { v[0] + ngx as i64 } else { v[0] };
-                let gy = if v[1] < 1 { v[1] + ngy as i64 } else { v[1] };
-                let gz = if v[2] < 2 { v[2] + ngz as i64 } else { v[2] };
+                let gy = if v[1] < 0 { v[1] + ngy as i64 } else { v[1] };
+                let gz = if v[2] < 0 { v[2] + ngz as i64 } else { v[2] };
                 [gx as usize, gy as usize, gz as usize]
             })
             .collect();
@@ -179,7 +180,7 @@ impl Wavecar {
                     !(ify > 0 || (ify == 0 && ifx >= 0))
                 })
                 .map(|[x, y, z]| [x as usize, y as usize, z as usize])
-                .map(|[x, y, z]| ([x, y, z], [ngx as usize - x, ngy as usize - y, z]))
+                .map(|[x, y, z]| ([x, y, z], [ngx as usize - x - 1, ngy as usize - y - 1, z]))
                 .collect::<Vec<([usize; 3], [usize; 3])>>()
         };
 
@@ -242,9 +243,9 @@ impl Wavecar {
     }
 
     pub fn get_wavefunction_in_realspace_default_ngrid(&mut self,
-                                            ispin: u64,
-                                            ikpoint: u64,
-                                            iband: u64) -> Result<Wavefunction, WavecarError> {
+                                                       ispin: u64,
+                                                       ikpoint: u64,
+                                                       iband: u64) -> Result<Wavefunction, WavecarError> {
         let ngrid = self.ngrid.iter().map(|x| x * 2).collect::<Vec<_>>();
         self.get_wavefunction_in_realspace(ispin, ikpoint, iband, ngrid)
     }

@@ -8,13 +8,20 @@ use crate::get_fpath_in_current_dir;
 mod test {
     use super::*;
     use wavecar_rs::wavecar::{WavecarType, GammaHalfDirection};
+    use vasp_poscar::Poscar;
+    use vaspchg_rs::ChgType;
     // use core::panicking::panic_fmt;
 
     #[test]
     fn test_read_wavecar() -> io::Result<()> {
-        let path = get_fpath_in_current_dir!("WAVECAR");
-        let wavecar = Wavecar::from_file(&path)?;
-        println!("{:#?}", wavecar);
+        let mut wavecar = Wavecar::from_file(&get_fpath_in_current_dir!("WAVECAR"))?;
+        wavecar.set_wavecar_type(WavecarType::GammaHalf(GammaHalfDirection::X));
+        let poscar = Poscar::from_path(&get_fpath_in_current_dir!("POSCAR")).unwrap();
+        wavecar.get_wavefunction_in_realspace_default_ngrid(0, 0, 5)
+            .unwrap()
+            .into_parchg_obj(&poscar)
+            .write_file(&get_fpath_in_current_dir!("wfc.vasp"), ChgType::Parchg)
+            .unwrap();
         Ok(())
     }
 

@@ -1,17 +1,3 @@
-// fftw wrapper
-// #![allow(unused)]
-
-// Cannot compile here
-// pub fn fftn<D>(input: &Array<c64, D>) -> &Array<c64, D> {
-//     let mut input = input.clone();
-//     let mut output = input.clone();
-//     C2CPlan64::aligned(input.shape(), Sign::Forward, Flag::MEASURE)
-//         .unwrap()
-//         .c2c(input.as_slice_mut().unwrap(), output.as_slice_mut().unwrap())
-//         .unwrap();
-//     output
-// }
-
 #[macro_export]
 macro_rules! fft {
     ($x:expr) => {{
@@ -31,16 +17,16 @@ macro_rules! fft {
 macro_rules! ifft {
     ($x:expr) => {{
         use fftw::plan::*;
-        use fftw::types::c64;
         use fftw::types::{Flag, Sign};
 
-        let mut out = $x.clone();
-        let norm_fact = c64::new(out.len() as f64, 0.0);
-        C2CPlan64::aligned($x.shape(), Sign::Backward, Flag::MEASURE)
+        let mut _in = $x.as_standard_layout();
+        let mut out = $x.as_standard_layout().into_owned();
+        let norm_fact = out.len() as f64;
+        C2CPlan64::aligned(_in.shape(), Sign::Backward, Flag::MEASURE)
             .unwrap()
-            .c2c($x.as_slice_mut().unwrap(), out.as_slice_mut().unwrap())
+            .c2c(_in.as_slice_mut().unwrap(), out.as_slice_mut().unwrap())
             .unwrap();
-        out /= norm_fact;
+        out.par_mapv_inplace(|v| v.unscale(norm_fact));
         out
     }};
 }
@@ -56,7 +42,7 @@ mod test {
         let input = (1..=9)
             .map(|x| c64::new(x as f64, 0.0))
             .collect::<Array1<c64>>();
-        let mut output: Array1<c64> = fft!(input.clone());
+        let output: Array1<c64> = fft!(input.clone());
         let expected = &[
             c64 { re: 45.0, im:   0.0, },
             c64 { re: -4.5, im:  12.363648387545801, },
@@ -81,7 +67,7 @@ mod test {
     fn test_fft_macro_2d() {
         let input = (1..=9).map(|x| c64::new(x as f64, 0.0)).collect::<Vec<_>>();
         let input = Array2::from_shape_vec((3, 3), input).unwrap();
-        let mut output: Array2<c64> = fft!(input.clone());
+        let output: Array2<c64> = fft!(input.clone());
         let expected = arr2(&[
             [c64 { re: 45.0, im: 0.0, },
                 c64 { re: -4.5, im: 2.598076211353316, },
@@ -109,7 +95,7 @@ mod test {
             .map(|x| c64::new(x as f64, 0.0))
             .collect::<Vec<_>>();
         let input = Array3::from_shape_vec((3, 3, 3), input).unwrap();
-        let mut output: Array3<c64> = fft!(input.clone());
+        let output: Array3<c64> = fft!(input.clone());
         let expected = arr3(
             &[[[c64 { re: 378.0, im: 0.0, }, c64 { re: -13.5, im: 7.794228634059948, }, c64 { re: -13.5, im: -7.794228634059948, }],
                 [c64 { re: -40.5, im: 23.38268590217984, }, c64 { re: 0.0, im: 0.0, }, c64 { re: 0.0, im: 0.0, }],

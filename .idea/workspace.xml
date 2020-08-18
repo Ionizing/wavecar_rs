@@ -6,7 +6,15 @@
   <component name="ChangeListManager">
     <list default="true" id="c4acbc81-4c31-4229-a4e0-b0373ee695c6" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/fft.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/fft.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/wavefunction.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/wavefunction.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/h2o_gam_5_2/h2o_gam_5_2.rs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/h2o_gam_5_2/h2o_gam_5_2.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/h2o_gam_5_4/POSCAR" beforeDir="false" afterPath="$PROJECT_DIR$/tests/h2o_gam_5_4/POSCAR" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/h2o_gam_5_4/h2o_gam_5_4.rs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/h2o_gam_5_4/h2o_gam_5_4.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

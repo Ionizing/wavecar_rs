@@ -125,14 +125,25 @@ impl Wavefunction {
     }
 
     pub fn get_wavefun_realgrid(&self) -> Array3<f64> {
-        todo!();
+        let shape = self.data.shape();
+        let vec = self.data.par_iter()
+            .map(|v: &Complex64| v.re)
+            .collect::<Vec<f64>>();
+        Array3::from_shape_vec((shape[0], shape[1], shape[2]), vec)
+            .unwrap()
     }
 
     pub fn get_wavefun_imagegrid(&self) -> Array3<f64> {
-        todo!();
+        let shape = self.data.shape();
+        let vec = self.data.par_iter()
+            .map(|v: &Complex64| v.im)
+            .collect::<Vec<f64>>();
+        Array3::from_shape_vec((shape[0], shape[1], shape[2]), vec)
+            .unwrap()
     }
 
     pub fn into_parchg_obj(self, poscar: &Poscar) -> ChgBase {
-        todo!();
+        let chg = self.get_charge_density();
+        ChgBase::from_builder(chg, vec![], poscar.clone())
     }
 }
