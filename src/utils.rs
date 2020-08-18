@@ -24,8 +24,8 @@ impl Wavecar {
             .into_par_iter()
             .map(|v: Vec<i64>| -> [usize; 3] {
                 let gx = if v[0] < 0 { v[0] + ngx as i64 } else { v[0] };
-                let gy = if v[1] < 1 { v[1] + ngx as i64 } else { v[1] };
-                let gz = if v[2] < 2 { v[2] + ngx as i64 } else { v[2] };
+                let gy = if v[1] < 0 { v[1] + ngx as i64 } else { v[1] };
+                let gz = if v[2] < 0 { v[2] + ngx as i64 } else { v[2] };
                 [gx as usize, gy as usize, gz as usize]
             })
             .collect();

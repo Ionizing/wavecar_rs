@@ -18,7 +18,7 @@ mod test {
         let mut wavecar = Wavecar::from_file(&path)?;
 
         let poscar = Poscar::from_path(&get_fpath_in_current_dir!("POSCAR")).unwrap();
-        wavecar.get_wavefunction_in_realspace_default_ngrid(0, 0, 5)
+        wavecar.get_wavefunction_in_realspace_default_ngrid(0, 0, 11)
             .unwrap()
             .into_parchg_obj(&poscar)
             .write_file(&get_fpath_in_current_dir!("wfc.vasp"), ChgType::Parchg)
