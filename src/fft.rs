@@ -11,6 +11,22 @@ macro_rules! fft {
             .unwrap();
         out
     }};
+    //
+    // ($x:expr, $shape:expr) => {{
+    //     use ndarray::Array;
+    //     use fftw::plan::*;
+    //     use fftw::types::{Flag, Sign};
+    //
+    //     let mut _in = $x.as_standard_layout();
+    //     let mut out = Array::zeros($shape);
+    //     let norm_fact = out.len() as f64;
+    //     C2CPlan64::aligned(out.shape(), Sign::Forward, Flag::MEASURE)
+    //         .unwrap()
+    //         .c2c(_in.as_slice_mut().unwrap(), out.as_slice_mut().unwrap())
+    //         .unwrap();
+    //     out.par_mapv_inplace(|v| v.unscale(norm_fact));
+    //     out
+    // }};
 }
 
 #[macro_export]
@@ -29,6 +45,22 @@ macro_rules! ifft {
         out.par_mapv_inplace(|v| v.unscale(norm_fact));
         out
     }};
+    //
+    // ($x:expr, $shape:expr) => {{
+    //     use ndarray::Array;
+    //     use fftw::plan::*;
+    //     use fftw::types::{Flag, Sign};
+    //
+    //     let mut _in = $x.as_standard_layout();
+    //     let mut out = Array::zeros($shape);
+    //     let norm_fact = out.len() as f64;
+    //     C2CPlan64::aligned(out.shape(), Sign::Backward, Flag::MEASURE)
+    //         .unwrap()
+    //         .c2c(_in.as_slice_mut().unwrap(), out.as_slice_mut().unwrap())
+    //         .unwrap();
+    //     out.par_mapv_inplace(|v| v.unscale(norm_fact));
+    //     out
+    // }};
 }
 
 #[cfg(test)]

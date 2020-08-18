@@ -1,8 +1,10 @@
 #![allow(unused)]
 
 use ndarray::parallel::prelude::*;
-use ndarray::Array3;
+use ndarray::{Array, Array3, ArrayBase, Axis, Data, Dimension, Slice};
+use ndarray::s;
 use num::complex::Complex64;
+use num::traits::Zero;
 
 use crate::constants::*;
 use crate::error::WavecarError;
@@ -126,8 +128,19 @@ impl Wavecar {
         wavefun_in_kspace.par_mapv_inplace(|v| v.unscale(f64::sqrt(2.0)) );
         wavefun_in_kspace[[0, 0, 0]] *= Complex64::new(f64::sqrt(2.0), 0.0);
         wavefun_in_kspace.swap_axes(0, 2);
-        let mut wavefun_in_rspace = ifft!(wavefun_in_kspace);
+
+        let shape = wavefun_in_kspace.shape().to_owned();
+        let padded_wfr = pad_with_zeros(&wavefun_in_kspace,
+                                        vec![[0, ngx - shape[0]],
+                                             [0, ngy - shape[1]],
+                                             [0, ngz - shape[2]]]);
+        dbg!(&padded_wfr);
+
+        let mut wavefun_in_rspace = ifft!(padded_wfr);
         wavefun_in_rspace.swap_axes(0, 2);
+
+        dbg!(&wavefun_in_rspace);
+
         let ret = wavefun_in_rspace.as_standard_layout().into_owned();
         ret
     }
@@ -185,7 +198,14 @@ impl Wavecar {
         // wavefun_in_kspace /= Complex64::new(f64::sqrt(2.0), 0.0);
         wavefun_in_kspace.par_mapv_inplace(|v| v.unscale(f64::sqrt(2.0)));
         wavefun_in_kspace[[0, 0, 0]] *= Complex64::new(f64::sqrt(2.0), 0.0);
-        ifft!(wavefun_in_kspace)
+
+        let shape = wavefun_in_kspace.shape().to_owned();
+        let padded_wfr = pad_with_zeros(&wavefun_in_kspace,
+                                        vec![[0, ngx - shape[0]],
+                                             [0, ngy - shape[1]],
+                                             [0, ngz - shape[2]]]);
+
+        ifft!(padded_wfr)
     }
 
     pub fn get_wavefunction_in_realspace(&mut self,
@@ -245,6 +265,39 @@ impl Wavecar {
         self.get_wavefunction_in_realspace(ispin, ikpoint, iband, ngrid)
     }
 
+}
+
+fn pad_with_zeros<A, S, D>(arr: &ArrayBase<S, D>, pad_width: Vec<[usize; 2]>) -> Array<A, D>
+where
+    A: Clone + Zero,
+    S: Data<Elem = A>,
+    D: Dimension,
+{
+    assert_eq!(
+        arr.ndim(),
+        pad_width.len(),
+        "Array ndim must match length of `pad_width`."
+    );
+
+    // Compute shape of final padded array.
+    let mut padded_shape = arr.raw_dim();
+    for (ax, (&ax_len, &[pad_lo, pad_hi])) in arr.shape().iter().zip(&pad_width).enumerate() {
+        padded_shape[ax] = ax_len + pad_lo + pad_hi;
+    }
+
+    let mut padded = Array::zeros(padded_shape);
+    {
+        // Select portion of padded array that needs to be copied from the
+        // original array.
+        let mut orig_portion = padded.view_mut();
+        for (ax, &[pad_lo, pad_hi]) in pad_width.iter().enumerate() {
+            orig_portion
+                .slice_axis_inplace(Axis(ax), Slice::from(pad_lo as isize..-(pad_hi as isize)));
+        }
+        // Copy the data from the original array.
+        orig_portion.assign(arr);
+    }
+    padded
 }
 
 #[cfg(test)]
