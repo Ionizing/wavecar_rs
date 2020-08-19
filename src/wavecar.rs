@@ -341,7 +341,7 @@ impl Wavecar {
                 (reci_cell_t.dot(&gpk)).norm().powf(2.0) * PIx2.powf(2.0) * HBAR2D2ME
                     <
                     en_cutoff
-            }).collect::<Vec::<Vec::<i64>>>()
+            }).collect::<Vec<Vec<i64>>>()
     }
 
     fn _generate_fft_grid_specific(ngrid: Vec<u64>,
@@ -371,7 +371,7 @@ impl Wavecar {
         }
     }
 
-    pub(crate) fn generate_fft_grid(&self, ikpoint: u64) -> Vec<Vec<i64>> {
+    pub fn generate_fft_grid(&self, ikpoint: u64) -> Vec<Vec<i64>> {
         Self::_generate_fft_grid_specific(
             self.ngrid.clone(),
             self.k_vecs.row(ikpoint as usize).to_owned(),
@@ -462,14 +462,14 @@ impl Wavecar {
         let num_plws = self.num_plws[ikpoint as usize] as usize;
         let dump = match self.prec_type {
             WFPrecisionType::Complex32 => {
-                let mut ret = vec![0f32; num_plws];
+                let mut ret = vec![0f32; num_plws * 2];
                 self.file.read_f32_into::<LittleEndian>(&mut ret).unwrap();
                 ret.into_par_iter()
                     .map(|x| x as f64)
                     .collect::<Vec<_>>()
             },
             WFPrecisionType::Complex64 => {
-                let mut ret = vec![0f64; num_plws];
+                let mut ret = vec![0f64; num_plws * 2];
                 self.file.read_f64_into::<LittleEndian>(&mut ret).unwrap();
                 ret
             }

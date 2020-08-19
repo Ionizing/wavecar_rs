@@ -68,7 +68,7 @@ impl Wavefunction {
         }
     }
 
-    pub fn apply_phase(&mut self, r0: &[f64; 3]) -> &mut Self {
+    pub fn apply_phase(mut self, r0: &[f64; 3]) -> Self {
         let ngx = self.data.shape()[0];
         let ngy = self.data.shape()[1];
         let ngz = self.data.shape()[2];
@@ -109,7 +109,7 @@ impl Wavefunction {
         self
     }
 
-    pub fn normalize(&mut self) -> &mut Self {
+    pub fn normalize(mut self) -> Self {
         let norm = self.data.norm();
         self.data.par_mapv_inplace(|v| v.unscale(norm));
         self

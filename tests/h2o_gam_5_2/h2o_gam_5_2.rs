@@ -13,7 +13,17 @@ mod test {
     // use core::panicking::panic_fmt;
 
     #[test]
-    fn test_read_wavecar() -> io::Result<()> {
+    fn test_basic_properties() -> io::Result<()> {
+        let mut wavecar = Wavecar::from_file(&get_fpath_in_current_dir!("WAVECAR"))?;
+        wavecar.set_wavecar_type(WavecarType::GammaHalf(GammaHalfDirection::Z));
+
+        let fft_grid = wavecar.generate_fft_grid(0);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_wavecar_in_realspace() -> io::Result<()> {
         let path = get_fpath_in_current_dir!("WAVECAR");
         let mut wavecar = Wavecar::from_file(&path)?;
         wavecar.set_wavecar_type(WavecarType::GammaHalf(GammaHalfDirection::Z));

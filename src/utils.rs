@@ -11,6 +11,7 @@ use crate::error::WavecarError;
 use crate::ifft; //  ifft!
 use crate::wavecar::*;
 use crate::wavefunction::Wavefunction;
+use std::fs::File;
 
 impl Wavecar {
     fn _get_wavefunction_in_realspace_std(&mut self,
@@ -100,49 +101,33 @@ impl Wavecar {
         gvecs.into_iter().zip(coeffs.into_iter())
             .for_each(|(idx, v)| wavefun_in_kspace[idx] = *v);
 
-        // complement of the grid
-        let gvecs_complement = {
-            // let ngx = ngx as i64;
-            let ngy = ngy as i64;
-            let ngz = ngz as i64;
-            let fyv = (0 .. ngy).collect::<Vec<_>>();
-            let fzv = (0 .. ngz).collect::<Vec<_>>();
-            fyv.iter().flat_map(|&y| {
-                let fz = &fzv;
-                fz.iter().map(move |&z| [0, y, z])
-            })
-                .filter(|[_, y, z]| {
-                    let ify = if *y < ngy / 2 + 1 { *y } else { y - ngy };
-                    let ifz = if *z < ngz / 2 + 1 { *z } else { z - ngz };
-                    !(ify > 0 || (0 == ify && ifz >= 0))
-                })
-                .map(|[x, y, z]| [x as usize, y as usize, z as usize])
-                .map(|[x, y, z]| ([x, y, z], [x, ngy as usize - y - 1, ngz as usize - z - 1]))
-                .collect::<Vec<([usize; 3], [usize; 3])>>()
-        };
+        {
+            let ngy_ = ngy as i64;
+            let ngz_ = ngz as i64;
+            for j in 0 .. ngy_ {
+                for k in 0 .. ngz_ {
+                    let fy = if j < ngy_/2 + 1 { j } else  { j - ngy_ };
+                    let fz = if k < ngz_/2 + 1 { k } else  { k - ngz_ };
+                    if fy > 0 || (fy == 0 && fz >= 0) { continue; }
+                    wavefun_in_kspace[[0, j as usize, k as usize]] =
+                        wavefun_in_kspace[[0, ((ngy_ - j)%ngy_) as usize, ((ngz_ - k)%ngy_) as usize]].conj();
+                }
+            }
+        }
 
-        gvecs_complement
-            .into_iter()
-            .for_each(|(a, b)| wavefun_in_kspace[a] = wavefun_in_kspace[b].conj());
-        // wavefun_in_kspace /= Complex64::new(f64::sqrt(2.0), 0.0);
         wavefun_in_kspace.par_mapv_inplace(|v| v.unscale(f64::sqrt(2.0)) );
         wavefun_in_kspace[[0, 0, 0]] *= Complex64::new(f64::sqrt(2.0), 0.0);
         wavefun_in_kspace.swap_axes(0, 2);
 
         let shape = wavefun_in_kspace.shape().to_owned();
-        let padded_wfr = pad_with_zeros(&wavefun_in_kspace,
-                                        vec![[0, ngx - shape[0]],
-                                             [0, ngy - shape[1]],
-                                             [0, ngz - shape[2]]]);
-        dbg!(&padded_wfr);
+        let mut padded_wfr = Array3::zeros((ngx, ngy, ngz));
+        padded_wfr.view_mut()
+            .slice_mut(s![0..shape[0], 0..shape[1], 0..shape[2]])
+            .assign(&wavefun_in_kspace.slice_move(s![.., .., ..]));
 
         let mut wavefun_in_rspace = ifft!(padded_wfr);
         wavefun_in_rspace.swap_axes(0, 2);
-
-        dbg!(&wavefun_in_rspace);
-
-        let ret = wavefun_in_rspace.as_standard_layout().into_owned();
-        ret
+        wavefun_in_rspace.as_standard_layout().into_owned()
     }
 
     fn _get_wavefunction_in_realspace_gam_z(&mut self,
@@ -170,40 +155,31 @@ impl Wavecar {
         gvecs.into_iter().zip(coeffs.into_iter())
             .for_each(|(idx, v)| wavefun_in_kspace[idx] = *v);
 
-        let gvecs_complement = {
-            let ngx = ngx as i64;
-            let ngy = ngy as i64;
-            // let ngz = ngz as i64;
+        {
+            let ngx_ = ngx as i64;
+            let ngy_ = ngy as i64;
+            let mut i_ = 0;
+            for i in 0 .. ngx_ {
+                for j in 0 .. ngy_ {
+                    let fx = if i < ngx_/2 + 1 { i } else { i - ngx_ };
+                    let fy = if j < ngy_/2 + 1 { j } else { j - ngy_ };
+                    if (fy > 0) || (fy == 0 && fx >= 0) { continue; }
+                    i_ += 1;
+                    wavefun_in_kspace[[i as usize, j as usize, 0]] =
+                        wavefun_in_kspace[[((ngx_ - i)%ngy_) as usize, ((ngy_ - j)%ngy_) as usize, 0]].conj();
+                }
+            }
+            dbg!(i_);
+        }
 
-            let fxv = (0..ngx).collect::<Vec<_>>();
-            let fyv = (0..ngy).collect::<Vec<_>>();
-
-            fxv.iter().flat_map(|&x| {
-                    let fy = &fyv;
-                    fy.iter().map(move |&y| [x, y, 0])
-                })
-                .filter(|[x, y, _]| {
-                    let ifx = if *x < ngx / 2 + 1 { *x } else { x - ngx };
-                    let ify = if *y < ngy / 2 + 1 { *y } else { y - ngy };
-                    !(ify > 0 || (ify == 0 && ifx >= 0))
-                })
-                .map(|[x, y, z]| [x as usize, y as usize, z as usize])
-                .map(|[x, y, z]| ([x, y, z], [ngx as usize - x - 1, ngy as usize - y - 1, z]))
-                .collect::<Vec<([usize; 3], [usize; 3])>>()
-        };
-
-        gvecs_complement
-            .into_iter()
-            .for_each(|(a, b)| wavefun_in_kspace[a] = wavefun_in_kspace[b].conj());
-        // wavefun_in_kspace /= Complex64::new(f64::sqrt(2.0), 0.0);
         wavefun_in_kspace.par_mapv_inplace(|v| v.unscale(f64::sqrt(2.0)));
         wavefun_in_kspace[[0, 0, 0]] *= Complex64::new(f64::sqrt(2.0), 0.0);
 
         let shape = wavefun_in_kspace.shape().to_owned();
-        let padded_wfr = pad_with_zeros(&wavefun_in_kspace,
-                                        vec![[0, ngx - shape[0]],
-                                             [0, ngy - shape[1]],
-                                             [0, ngz - shape[2]]]);
+        let mut padded_wfr = Array3::zeros((ngx, ngy, ngz));
+        padded_wfr.view_mut()
+            .slice_mut(s![0..shape[0], 0..shape[1], 0..shape[2]])
+            .assign(&wavefun_in_kspace.slice_move(s![.., .., ..]));
 
         ifft!(padded_wfr)
     }
