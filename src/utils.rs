@@ -110,7 +110,7 @@ impl Wavecar {
                     let fz = if k < ngz_/2 + 1 { k } else  { k - ngz_ };
                     if fy > 0 || (fy == 0 && fz >= 0) { continue; }
                     wavefun_in_kspace[[0, j as usize, k as usize]] =
-                        wavefun_in_kspace[[0, ((ngy_ - j)%ngy_) as usize, ((ngz_ - k)%ngy_) as usize]].conj();
+                        wavefun_in_kspace[[0, (-j).rem_euclid(ngy_) as usize, (-k).rem_euclid(ngy_) as usize]].conj();
                 }
             }
         }
@@ -166,7 +166,7 @@ impl Wavecar {
                     if (fy > 0) || (fy == 0 && fx >= 0) { continue; }
                     i_ += 1;
                     wavefun_in_kspace[[i as usize, j as usize, 0]] =
-                        wavefun_in_kspace[[((ngx_ - i)%ngy_) as usize, ((ngy_ - j)%ngy_) as usize, 0]].conj();
+                        wavefun_in_kspace[[(-i).rem_euclid(ngx_) as usize, (-j).rem_euclid(ngy_) as usize, 0]].conj();
                 }
             }
             dbg!(i_);
@@ -309,7 +309,6 @@ mod test {
                 gvecs_complement.push([0, fy, fz]);
             }
         }
-        // println!("{:?}, size = {}", &gvecs_complement, &gvecs_complement.len());
         assert_eq!(17, gvecs_complement.len());
     }
 
@@ -331,7 +330,6 @@ mod test {
             }
         }
 
-        // println!("{:?}, size = {}", &gvecs_complement, gvecs_complement.len());
         assert_eq!(17, gvecs_complement.len());
 
         let fy = (0..ngy).collect::<Vec<_>>();
@@ -348,7 +346,6 @@ mod test {
                 !(ify > 0 || (0 == ify && ifz >= 0))
             })
             .collect::<Vec<[i64; 3]>>();
-        // println!("{:?}, size = {}", &gvecs_complement_2, gvecs_complement_2.len());
         assert_eq!(17, gvecs_complement_2.len());
     }
 
