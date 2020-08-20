@@ -5,13 +5,30 @@ macro_rules! fft {
         use fftw::types::{Flag, Sign};
 
         let mut out = $x.clone();
-        C2CPlan64::aligned($x.shape(), Sign::Forward, Flag::MEASURE)
+        C2CPlan64::aligned($x.shape(), Sign::Forward, Flag::ESTIMATE)
             .unwrap()
             .c2c($x.as_slice_mut().unwrap(), out.as_slice_mut().unwrap())
             .unwrap();
         out
     }};
 }
+
+// #[macro_export]
+// macro_rules! rfft {
+//     ($x:expr) => {{
+//         use ndarray::{ArrayD, IxDyn};
+//         use fftw::plan::*;
+//         use fftw::types::{Flag, Sign, c64};
+//
+//         let shape = $x.shape().clone();
+//         let mut out = ArrayD::<c64>::zeros(IxDyn(shape)).into_owned();
+//
+//         R2CPlan64::aligned($x.shape(), Flag::ESTIMATE).unwrap()
+//             .r2c($x.as_slice_mut().unwrap(), out.as_slice_mut().unwrap())
+//             .unwrap();
+//         out
+//     }};
+// }
 
 #[macro_export]
 macro_rules! ifft {
@@ -22,13 +39,33 @@ macro_rules! ifft {
         let mut _in = $x.as_standard_layout();
         let mut out = $x.as_standard_layout().into_owned();
         let norm_fact = out.len() as f64;
-        C2CPlan64::aligned(_in.shape(), Sign::Backward, Flag::MEASURE)
-            .unwrap()
+        C2CPlan64::aligned(_in.shape(), Sign::Backward, Flag::ESTIMATE).unwrap()
             .c2c(_in.as_slice_mut().unwrap(), out.as_slice_mut().unwrap())
             .unwrap();
         out.par_mapv_inplace(|v| v.unscale(norm_fact));
         out
     }};
+}
+
+#[macro_export]
+macro_rules! irfft {
+    ($x:expr, $s:expr) => {{
+        use fftw::plan::*;
+        use fftw::types::{Flag, Sign, c64};
+        use ndarray::{ArrayD, IxDyn};
+
+        let mut _in = $x.as_standard_layout();
+        let mut out = Array3::<f64>::zeros($s);
+        let norm_fact = out.len() as f64;
+        C2RPlan64::aligned(out.shape(), Flag::ESTIMATE).unwrap()
+            .c2r(_in.as_slice_mut().unwrap(), out.as_slice_mut().unwrap())
+            .unwrap();
+
+        let mut complex_out = Array3::<c64>::zeros($s);
+        complex_out.iter_mut().zip(out.iter())
+            .for_each(|(y, x)| y.re = *x / norm_fact);
+        complex_out.into_owned()
+    }}
 }
 
 #[cfg(test)]

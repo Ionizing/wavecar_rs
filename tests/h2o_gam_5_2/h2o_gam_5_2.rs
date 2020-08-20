@@ -21,8 +21,8 @@ mod test {
 
         let coeffs = wavecar.read_wavefunction_coeffs(0, 0, 0).unwrap();
         assert_eq!(coeffs.len(), 4658);
-        assert_eq!(coeffs[0], c64::new(-0.14767155051231384, 0.0));
-        assert_eq!(coeffs[4657], c64::new(-0.0003599866759032011, -0.000024752824174356647));
+        assert_eq!(coeffs[0], c64::new(-0.14767615497112274, 0.0));
+        assert_eq!(coeffs[4657], c64::new(-0.00032068631844595075, -0.0000000000014012259234863489));
 
         let fft_grid = wavecar.generate_fft_grid(0);
         assert_eq!(fft_grid.len(), 4658);
@@ -37,7 +37,7 @@ mod test {
     fn test_wavecar_in_realspace() -> io::Result<()> {
         let path = get_fpath_in_current_dir!("WAVECAR");
         let mut wavecar = Wavecar::from_file(&path)?;
-        wavecar.set_wavecar_type(WavecarType::GammaHalf(GammaHalfDirection::X));
+        wavecar.set_wavecar_type(WavecarType::GammaHalf(GammaHalfDirection::Z));
 
         let poscar = Poscar::from_path(&get_fpath_in_current_dir!("POSCAR")).unwrap();
         wavecar.get_wavefunction_in_realspace_default_ngrid(0, 0, 5)

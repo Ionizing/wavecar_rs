@@ -1,17 +1,16 @@
 #![allow(unused)]
 
 use ndarray::parallel::prelude::*;
-use ndarray::{Array, Array3, ArrayBase, Axis, Data, Dimension, Slice};
+use ndarray::Array3;
 use ndarray::s;
 use num::complex::Complex64;
-use num::traits::Zero;
 
 use crate::constants::*;
 use crate::error::WavecarError;
 use crate::ifft; //  ifft!
+use crate::irfft;
 use crate::wavecar::*;
 use crate::wavefunction::Wavefunction;
-use std::fs::File;
 
 impl Wavecar {
     fn _get_wavefunction_in_realspace_std(&mut self,
@@ -118,14 +117,7 @@ impl Wavecar {
         wavefun_in_kspace.par_mapv_inplace(|v| v.unscale(f64::sqrt(2.0)) );
         wavefun_in_kspace[[0, 0, 0]] *= Complex64::new(f64::sqrt(2.0), 0.0);
         wavefun_in_kspace.swap_axes(0, 2);
-
-        let shape = wavefun_in_kspace.shape().to_owned();
-        let mut padded_wfr = Array3::zeros((ngx, ngy, ngz));
-        padded_wfr.view_mut()
-            .slice_mut(s![0..shape[0], 0..shape[1], 0..shape[2]])
-            .assign(&wavefun_in_kspace.slice_move(s![.., .., ..]));
-
-        let mut wavefun_in_rspace = ifft!(padded_wfr);
+        let mut wavefun_in_rspace = irfft!(wavefun_in_kspace, (ngx, ngy, ngz));
         wavefun_in_rspace.swap_axes(0, 2);
         wavefun_in_rspace.as_standard_layout().into_owned()
     }
@@ -158,30 +150,20 @@ impl Wavecar {
         {
             let ngx_ = ngx as i64;
             let ngy_ = ngy as i64;
-            let mut i_ = 0;
             for i in 0 .. ngx_ {
                 for j in 0 .. ngy_ {
                     let fx = if i < ngx_/2 + 1 { i } else { i - ngx_ };
                     let fy = if j < ngy_/2 + 1 { j } else { j - ngy_ };
                     if (fy > 0) || (fy == 0 && fx >= 0) { continue; }
-                    i_ += 1;
                     wavefun_in_kspace[[i as usize, j as usize, 0]] =
                         wavefun_in_kspace[[(-i).rem_euclid(ngx_) as usize, (-j).rem_euclid(ngy_) as usize, 0]].conj();
                 }
             }
-            dbg!(i_);
         }
 
         wavefun_in_kspace.par_mapv_inplace(|v| v.unscale(f64::sqrt(2.0)));
         wavefun_in_kspace[[0, 0, 0]] *= Complex64::new(f64::sqrt(2.0), 0.0);
-
-        let shape = wavefun_in_kspace.shape().to_owned();
-        let mut padded_wfr = Array3::zeros((ngx, ngy, ngz));
-        padded_wfr.view_mut()
-            .slice_mut(s![0..shape[0], 0..shape[1], 0..shape[2]])
-            .assign(&wavefun_in_kspace.slice_move(s![.., .., ..]));
-
-        ifft!(padded_wfr)
+        irfft!(wavefun_in_kspace, (ngx, ngy, ngz))
     }
 
     pub fn get_wavefunction_in_realspace(&mut self,
@@ -241,39 +223,6 @@ impl Wavecar {
         self.get_wavefunction_in_realspace(ispin, ikpoint, iband, ngrid)
     }
 
-}
-
-fn pad_with_zeros<A, S, D>(arr: &ArrayBase<S, D>, pad_width: Vec<[usize; 2]>) -> Array<A, D>
-where
-    A: Clone + Zero,
-    S: Data<Elem = A>,
-    D: Dimension,
-{
-    assert_eq!(
-        arr.ndim(),
-        pad_width.len(),
-        "Array ndim must match length of `pad_width`."
-    );
-
-    // Compute shape of final padded array.
-    let mut padded_shape = arr.raw_dim();
-    for (ax, (&ax_len, &[pad_lo, pad_hi])) in arr.shape().iter().zip(&pad_width).enumerate() {
-        padded_shape[ax] = ax_len + pad_lo + pad_hi;
-    }
-
-    let mut padded = Array::zeros(padded_shape);
-    {
-        // Select portion of padded array that needs to be copied from the
-        // original array.
-        let mut orig_portion = padded.view_mut();
-        for (ax, &[pad_lo, pad_hi]) in pad_width.iter().enumerate() {
-            orig_portion
-                .slice_axis_inplace(Axis(ax), Slice::from(pad_lo as isize..-(pad_hi as isize)));
-        }
-        // Copy the data from the original array.
-        orig_portion.assign(arr);
-    }
-    padded
 }
 
 #[cfg(test)]
