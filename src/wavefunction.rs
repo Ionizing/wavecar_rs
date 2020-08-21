@@ -146,4 +146,9 @@ impl Wavefunction {
         let chg = self.get_charge_density();
         ChgBase::from_builder(chg, vec![], poscar.clone())
     }
+
+    pub fn into_vesta_obj(self, poscar: &Poscar) -> ChgBase {
+        let chg = self.get_wavefun_realgrid();
+        ChgBase::from_builder(chg, vec![], poscar.clone())
+    }
 }

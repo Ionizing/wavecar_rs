@@ -21,7 +21,7 @@ mod test {
         wavecar.get_wavefunction_in_realspace_default_ngrid(0, 0, 11)
             .unwrap()
             .normalize()
-            .into_parchg_obj(&poscar)
+            .into_vesta_obj(&poscar)
             .write_file(&get_fpath_in_current_dir!("wfc.vasp"), ChgType::Parchg)
             .unwrap();
         Ok(())
