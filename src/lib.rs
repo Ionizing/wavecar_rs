@@ -5,7 +5,6 @@ pub mod wavecar;
 pub mod wavefunction;
 
 mod binary_io;
-mod constants;
+pub mod constants;
 mod fft;
 mod utils;
-// mod bench;
