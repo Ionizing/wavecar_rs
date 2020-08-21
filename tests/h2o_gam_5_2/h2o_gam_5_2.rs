@@ -10,7 +10,7 @@ mod test {
     use wavecar_rs::wavecar::{WavecarType, GammaHalfDirection};
     use vasp_poscar::Poscar;
     use vaspchg_rs::ChgType;
-    use ndarray::s;
+    // use ndarray::s;
     use num::complex::Complex64 as c64;
     // use core::panicking::panic_fmt;
 
@@ -29,7 +29,7 @@ mod test {
         assert_eq!(fft_grid[4657], &[0, -1, 13]);
         assert_eq!(fft_grid[2000], &[9, 7, 4]);
 
-        let wfcr = wavecar.get_wavefunction_in_realspace_default_ngrid(0, 0, 0).unwrap();
+        let _wfcr = wavecar.get_wavefunction_in_realspace_default_ngrid(0, 0, 0).unwrap();
         Ok(())
     }
 

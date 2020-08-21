@@ -7,8 +7,9 @@ use num::complex::Complex64;
 
 use crate::constants::*;
 use crate::error::WavecarError;
-use crate::ifft; //  ifft!
-use crate::irfft;
+// use crate::ifft; //  ifft!
+// use crate::irfft;
+use crate::fft::{ifft3, irfft3};
 use crate::wavecar::*;
 use crate::wavefunction::Wavefunction;
 
@@ -35,7 +36,7 @@ impl Wavecar {
         let mut wavefun_in_kspace = Array3::<Complex64>::zeros((ngx, ngy, ngz));
         gvecs.into_iter().zip(coeffs.into_iter())
             .for_each(|(idx, v)| wavefun_in_kspace[idx] = *v);
-        ifft!(wavefun_in_kspace)
+        ifft3(wavefun_in_kspace)
     }
 
     fn _get_wavefunction_in_realspace_soc(&mut self,
@@ -72,7 +73,7 @@ impl Wavecar {
         let mut wavefun_in_kspace = Array3::<Complex64>::zeros((ngx, ngy, ngz));
         gvecs.into_iter().zip(coeffs.into_iter())
             .for_each(|(idx, v)| wavefun_in_kspace[idx] = *v);
-        ifft!(wavefun_in_kspace)
+        ifft3(wavefun_in_kspace)
     }
 
     fn _get_wavefunction_in_realspace_gam_x(&mut self,
@@ -117,7 +118,7 @@ impl Wavecar {
         wavefun_in_kspace.par_mapv_inplace(|v| v.unscale(f64::sqrt(2.0)) );
         wavefun_in_kspace[[0, 0, 0]] *= Complex64::new(f64::sqrt(2.0), 0.0);
         wavefun_in_kspace.swap_axes(0, 2);
-        let mut wavefun_in_rspace = irfft!(wavefun_in_kspace, (ngx, ngy, ngz));
+        let mut wavefun_in_rspace = irfft3(wavefun_in_kspace, (ngx, ngy, ngz));
         wavefun_in_rspace.swap_axes(0, 2);
         wavefun_in_rspace.as_standard_layout().into_owned()
     }
@@ -163,7 +164,7 @@ impl Wavecar {
 
         wavefun_in_kspace.par_mapv_inplace(|v| v.unscale(f64::sqrt(2.0)));
         wavefun_in_kspace[[0, 0, 0]] *= Complex64::new(f64::sqrt(2.0), 0.0);
-        irfft!(wavefun_in_kspace, (ngx, ngy, ngz))
+        irfft3(wavefun_in_kspace, (ngx, ngy, ngz))
     }
 
     pub fn get_wavefunction_in_realspace(&mut self,
