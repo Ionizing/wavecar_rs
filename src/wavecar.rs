@@ -15,22 +15,38 @@ use crate::binary_io::ReadArray;
 use crate::constants::*;
 use crate::error::{ErrorKind as WavecarErrorKind, WavecarError};
 
+/// Wavefunction precision type
+///
+/// Usually VASP stores the band coefficients in two precisions: float32 and float64.
+/// From the precision tag in wavecar's header we can infer the precision type.
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum WFPrecisionType {
     Complex32,
     Complex64,
 }
 
+/// For gamma only version, there are two gamma half implementations:
 #[derive(PartialOrd, PartialEq, Debug, Copy, Clone)]
 pub enum GammaHalfDirection {
+    /// VASP5.3 and higher, half X: the x-negative part half sphere is abandoned
     X,
+    /// VASP5.2 and lower with parallel execution, half Z: the z-negative part half
+    /// sphere is abandoned
     Z,
 }
 
+/// WAVECAR type enumeration.
 #[derive(PartialOrd, PartialEq, Debug, Copy, Clone)]
 pub enum WavecarType {
+    /// Most typical WAVECAR type, vasp is executed via `vasp_std`, calculations is done with
+    /// all the grids in k-space.
     Standard,
+    /// vasp is executed via `vasp_gam`, only half of the k-space is utilized. When transforming
+    /// k-grid into real space grid, inversed complex to real FFT is applied.
     GammaHalf(GammaHalfDirection),
+    /// vasp is executed via `vasp_ncl`, there should be `LNONCOLLINEAR = T` in OUTCAR. In this
+    /// type WAVECAR, ISPIN = 1, but two spinor component is stored in ONE spin component side
+    /// by side.
     SpinOrbitCoupling,
 }
 
@@ -46,6 +62,7 @@ impl fmt::Display for WavecarType {
     }
 }
 
+/// Main Wavecar struct
 #[derive(Debug)]
 pub struct Wavecar {
     // f32, f64; gamma only, std, soc
@@ -263,6 +280,7 @@ impl Wavecar {
         )
     }
 
+    /// Checks the ispin, ikpoint, iband index validation. WavecarError is returned if fails.
     #[inline]
     pub fn check_indices(&self, ispin: u64, ikpoint: u64, iband: u64)
                          -> Result<(), WavecarError> {

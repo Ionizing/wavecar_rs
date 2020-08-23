@@ -1,13 +1,12 @@
 use std::io::{self};
 use std::path::PathBuf;
 
-use wavecar_rs::wavecar::Wavecar;
+use wavecar_rs::{Wavecar, WavecarType, GammaHalfDirection};
 use crate::get_fpath_in_current_dir;
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use wavecar_rs::wavecar::{WavecarType, GammaHalfDirection};
     use vasp_poscar::Poscar;
     use vaspchg_rs::ChgType;
     // use core::panicking::panic_fmt;

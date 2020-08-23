@@ -1,5 +1,9 @@
 #![allow(unused)]
 
+//! Module that manipulates single pseudo wavefunction.
+//!
+//! Note: all the subscript references are count from 0, which differs from Fortran.
+
 use ndarray::Array3;
 use ndarray::Array2;
 use num::complex::Complex64;
@@ -16,6 +20,12 @@ use vaspchg_rs::{
 use crate::wavecar::*;
 use crate::constants::*;
 
+
+/// Pseudo wavefunction structure.
+///
+/// This struct stores only one state's wavefunction data.
+///
+/// Note: all the subscript references are count from 0, which differs from Fortran.
 #[derive(Clone, Debug)]
 pub struct Wavefunction {
     wavecar_type: WavecarType,
@@ -29,6 +39,27 @@ pub struct Wavefunction {
     kvec: Vec<f64>,
     ngrid: Vec<u64>,
     data: Array3<Complex64>,
+}
+
+impl Wavefunction {
+    /// [wavecar_type](enum.WavecarType.html)
+    pub fn get_wavecar_type(&self) -> WavecarType { self.wavecar_type }
+    /// spin index, count from 0
+    pub fn get_ispin(&self) -> u64 { self.ispin }
+    /// kpoint index
+    pub fn get_ikpoint(&self) -> u64 { self.ikpoint }
+    /// band index
+    pub fn get_iband(&self) -> u64 { self.iband }
+    /// real space lattice vectors
+    pub fn get_real_cell(&self) -> Array2<f64> { self.real_cell.clone() }
+    /// band eigen value (i.e. band energy)
+    pub fn get_eigen_val(&self) -> f64 { self.eigen_val }
+    /// k-point's k-vector in k-space
+    pub fn get_kvec(&self) -> Vec<f64> { self.kvec.clone() }
+    /// mesh grid shape
+    pub fn get_ngrid(&self) -> Vec<u64> { self.ngrid.clone() }
+    /// mesh grid data
+    pub fn get_mesh_data(&self) -> &Array3<Complex64> { &self.data }
 }
 
 // Desired function:
@@ -46,6 +77,7 @@ pub struct Wavefunction {
 //   .into_charge_density()
 
 impl Wavefunction {
+    /// Build a Wavefunction struct manually
     pub(crate) fn new(wavecar_type: WavecarType,
                       ispin: u64,
                       ikpoint: u64,
@@ -68,6 +100,13 @@ impl Wavefunction {
         }
     }
 
+    /// Apply kr phase.
+    ///
+    /// > By default, the WAVECAR only stores the periodic part of the Bloch
+    ///  wavefunction. In order to get the full Bloch wavefunction, one need to
+    ///  multiply the periodic part with the phase: _exp(i*k*(r+r0))_. Below, the
+    ///  k-point vector and the real-space grid are both in the direct
+    ///  coordinates. ([Source](https://github.com/QijingZheng/VaspBandUnfolding/blob/master/vaspwfc.py#L524-L528))
     pub fn apply_phase(mut self, r0: &[f64; 3]) -> Self {
         let ngx = self.data.shape()[0];
         let ngy = self.data.shape()[1];
@@ -109,12 +148,14 @@ impl Wavefunction {
         self
     }
 
+    /// Normalize wavefunction data, makes it satisfies _<psi|psi> = 1_
     pub fn normalize(mut self) -> Self {
         let norm = self.data.norm();
         self.data.par_mapv_inplace(|v| v.unscale(norm));
         self
     }
 
+    /// Calculate the charge density mesh grid, according to _rho = |psi|^2_
     pub fn get_charge_density(&self) -> Array3<f64> {
         let shape = self.data.shape();
         let vec = self.data.par_iter()
@@ -124,6 +165,7 @@ impl Wavefunction {
             .unwrap()
     }
 
+    /// Get the real part of the wavefunction
     pub fn get_wavefun_realgrid(&self) -> Array3<f64> {
         let shape = self.data.shape();
         let vec = self.data.par_iter()
@@ -133,6 +175,7 @@ impl Wavefunction {
             .unwrap()
     }
 
+    /// Get the imaginary part of the wavefunction
     pub fn get_wavefun_imagegrid(&self) -> Array3<f64> {
         let shape = self.data.shape();
         let vec = self.data.par_iter()
@@ -142,11 +185,14 @@ impl Wavefunction {
             .unwrap()
     }
 
+    /// Calculate the charge density mesh grid and generate a Parchg object
     pub fn into_parchg_obj(self, poscar: &Poscar) -> ChgBase {
         let chg = self.get_charge_density();
         ChgBase::from_builder(chg, vec![], poscar.clone())
     }
 
+    /// Save raw real part of the wavefunction as vesta format (in fact, making use of CHGCAR format)
+    /// to visualize the wavefunction.
     pub fn into_vesta_obj(self, poscar: &Poscar) -> ChgBase {
         let chg = self.get_wavefun_realgrid();
         ChgBase::from_builder(chg, vec![], poscar.clone())

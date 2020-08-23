@@ -888,6 +888,8 @@ dependencies = [
 [[package]]
 name = "vaspchg_rs"
 version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4357396261b30724c727facca039a6eb2c2e0b9e102c9a70922d0cc1e11472b2"
 dependencies = [
  "ndarray 0.13.1",
  "regex 1.3.9",

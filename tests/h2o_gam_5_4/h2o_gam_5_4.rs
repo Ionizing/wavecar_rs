@@ -3,13 +3,12 @@ use std::path::PathBuf;
 
 use num::complex::Complex64 as c64;
 
-use wavecar_rs::wavecar::Wavecar;
+use wavecar_rs::{Wavecar, WavecarType, GammaHalfDirection};
 use crate::get_fpath_in_current_dir;
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use wavecar_rs::wavecar::{WavecarType, GammaHalfDirection};
     use vasp_poscar::Poscar;
     use vaspchg_rs::ChgType;
     // use ndarray::s;
