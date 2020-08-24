@@ -157,8 +157,9 @@
 //! radius is determined by the formula `(G + k)^2 / 2 < ENCUT`, where `k` is the k-vector of current
 //! k-point.
 //!
-//! We've rubbed the k-space cube into a k-space sphere, then the coefficients from WAVECAR can be
-//! placed into the grid in correspondence.
+//! We've rubbed the k-space cube into a k-space sphere, and the order is consistent with
+//! coefficients in WAVECAR. For now, we cannot put the coefficients in the grid directly, and why
+//! and how do we do the job will be illustrated in the next section.
 //!
 //! Then the arrangement is done for standard and SOC systems. As for the gamma only system, the
 //! arrangement is somewhat more complicate.
@@ -175,7 +176,7 @@
 //!     ((gx == 0) && (gy == 0) && (gz >= 0)
 //! })
 //! ```
-//! And for 'z' direction:
+//! And for `z` direction:
 //! ```text
 //! fft_grid.iter()
 //!     .filter(|[gx, gy, gz]| {
@@ -186,8 +187,76 @@
 //! ```
 //!
 //! ## Reverse Fourier transformation
+//! In VASP's implementation, the real space grid is at least double the size of k-space grid, which
+//! means `[rgx, rgy, rgz] = [kgx * 2, kgy * 2, kgz * 2]`. But we also can specify finer grid to
+//! reach better accuracy. Here we follow the VASP's implementation, and take `ngrid` as the user
+//! customized real-space grid.
 //!
+//! Still remember that there are negative indices in FFT grids? That negative index means count from
+//! tail.
+//! ```text
+//! let v = [0, 1, 2, 3, 4, 5, 6]; // len = 7
+//! v[0] == 0;
+//! v[1] == 1;
 //!
+//! v[-1] == 6;
+//! v[-2] == 5;
+//! ```
+//! We can transform the negative indices into positive indices via `idx_pos = idx_neg.rem_euclid(len)`
+//! where `len` is length of the dimension where index refers. Go back to our 3D k-space grid, the `len`
+//! should be the length of corresponding dimension of user customized k-grid.
+//!
+//! Now we can put the coefficients on the real gird.
+//! ```text
+//! kgrid[0, 0, 0] = coeff[0];
+//! kgrid[1, 0, 0] = coeff[1];
+//! kgrid[2, 0, 0] = coeff[2];
+//! ...
+//! ```
+//!
+//! If the system is standard of SOC, a simple reverse Fourier transformation would lead to the
+//! real space grid.
+//! ```text
+//! rgrid = ifft(kgrid)
+//! ```
+//! But for gamma only system, there is still a little job to do:
+//!
+//! Because gamma only version only stores half of the sphere, the reverse Fourier transformation
+//! is `irfft` (aka complex to real reverse Fourier transformation). This means that we must use a
+//! half of the grid to store the coefficients.
+//!
+//! For `z` direction, `kgrid.shape[2] = rgrid.shape[2]/2 + 1`
+//! ```text
+//! for fx in gxs {
+//!     for fy in gys {
+//!         if (fy > 0 || (fy == 0 && fx >=0)) continue;
+//!         kgrid[fx, fy, 0] = kgrid[-fx, -fy, 0].conjugate()
+//!     }
+//! }
+//! ```
+//!
+//! For 'x' direction, `kgrid.shape[0] = rgrid,shape[0]/2 + 1`
+//! ```text
+//! for fy in gys {
+//!     for fz in gzs {
+//!         if (fy > 0 || (fy == 0 && fz >= 0) continue;
+//!         kgrid[0, fy, fz] = kgrid[0, -fy, -fz].conjugate()
+//!     }
+//! }
+//! ```
+//!
+//! Then `rgrid = irfft(kgrid)` can produce the right result.
+//!
+//! # Visualize the wavefunction in real space
+//!
+//! Just take the `rgrid` and save in CHGCAR format and visualize it via
+//! [VESTA](https://jp-minerals.org/vesta/jp/).
+//!
+//! # Acknowledgement
+//!
+//! - [Qijing Zheng](https://github.com/QijingZheng/VaspBandUnfolding/blob/master/vaspwfc.py);
+//! - [ExpHP](https://github.com/ExpHP/vasp-poscar);
+//! - Other guys from the [group](https://t.me/rust_zh).
 
 pub use error::WavecarError;
 pub use wavecar::Wavecar;

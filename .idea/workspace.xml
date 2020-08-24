@@ -108,11 +108,11 @@
       </method>
     </configuration>
     <list>
+      <item itemvalue="Cargo Command.run" />
+      <item itemvalue="Cargo Command.test" />
       <item itemvalue="Cargo Command.Expand wavecar_rs::wavecar" />
       <item itemvalue="Cargo Command.Test fft::test::test_fft_macro_1d" />
       <item itemvalue="Cargo Command.Test fft::test::test_fft_macro_2d" />
-      <item itemvalue="Cargo Command.run" />
-      <item itemvalue="Cargo Command.test" />
     </list>
     <recent_temporary>
       <list>
@@ -176,10 +176,10 @@
       <screen x="0" y="23" width="2560" height="1337" />
     </state>
     <state x="1637" y="607" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/0.23.2560.1337@0.23.2560.1337" timestamp="1595339740299" />
-    <state x="0" y="23" width="1060" height="1317" key="dock-window-1" timestamp="1598248388555">
+    <state x="345" y="23" width="1060" height="1317" key="dock-window-1" timestamp="1598268957240">
       <screen x="0" y="23" width="2560" height="1337" />
     </state>
-    <state x="0" y="23" width="1060" height="1317" key="dock-window-1/0.23.2560.1337@0.23.2560.1337" timestamp="1598248388555" />
+    <state x="345" y="23" width="1060" height="1317" key="dock-window-1/0.23.2560.1337@0.23.2560.1337" timestamp="1598268957240" />
     <state x="1393" y="327" width="670" height="676" key="search.everywhere.popup" timestamp="1595312750571">
       <screen x="0" y="23" width="2560" height="1337" />
     </state>
