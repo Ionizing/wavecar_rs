@@ -63,6 +63,8 @@ impl fmt::Display for WavecarType {
 }
 
 /// Main Wavecar struct
+///
+/// The structure of WAVECAR is illustrated in the main page.
 #[derive(Debug)]
 pub struct Wavecar {
     // f32, f64; gamma only, std, soc
@@ -95,23 +97,31 @@ pub struct Wavecar {
 
 // getters
 impl Wavecar {
+    /// Returns the length of WAVECAR file
     pub fn get_wavecar_size(&self) -> u64               { self.file_len }
     pub fn get_record_len(&self) -> u64                 { self.rec_len }
     pub fn get_precision_type(&self) -> WFPrecisionType { self.prec_type }
+    /// Returns the WAVECAR type, Standard, SOC, GammaX or GammaZ
     pub fn get_wavecar_type(&self) -> WavecarType       { self.wavecar_type }
     pub fn get_num_spin(&self) -> u64                   { self.num_spin }
     pub fn get_num_kpoints(&self) -> u64                { self.num_kpoints }
     pub fn get_num_bands(&self) -> u64                  { self.num_bands }
     pub fn get_en_cutoff(&self) -> f64                  { self.en_cutoff }
     pub fn get_en_fermi(&self) -> f64                   { self.en_fermi }
-    pub fn get_real_cell(&self) -> Array2<f64>          { self.real_cell.to_owned() } // 3x3, copying cost is low
-    pub fn get_reci_cell(&self) -> Array2<f64>          { self.reci_cell.to_owned() } // same as below
+    /// Returns the lattice vectors in real-space
+    pub fn get_real_cell(&self) -> Array2<f64>          { self.real_cell.to_owned() } // 3x3, cloning cost is low
+    /// Returns the lattice vectors in reciprocal space
+    pub fn get_reci_cell(&self) -> Array2<f64>          { self.reci_cell.to_owned() } // same as above
     pub fn get_real_cell_volume(&self) -> f64           { self.real_cell_volume }
     pub fn get_num_plane_waves(&self) -> &Vec<u64>      { &self.num_plws }
+    /// Returns the reference of all k-point vectors
     pub fn get_k_vecs(&self) -> &Array2<f64>            { &self.k_vecs }
+    /// Returns the eigenvalue of each all bands, imaginary part is abandoned
     pub fn get_band_eigs(&self) -> &Array3<f64>         { &self.band_eigs }
     pub fn get_band_fweights(&self) -> &Array3<f64>     { &self.band_fweight }
 
+    /// Manually set the wavecar_type, if the given type is not consistent with WAVECAR, a panic
+    /// will be thrown.
     pub fn set_wavecar_type(&mut self, t: WavecarType) -> &mut Self {
         self.check_wavecar_type(t).unwrap();
         self.wavecar_type = t;
@@ -120,7 +130,10 @@ impl Wavecar {
 }
 
 impl Wavecar {
-    pub fn from_file(path: &Path) -> io::Result<Self> {
+    /// Read WAVECAR from file.
+    ///
+    /// Note: **Band coefficients are not read here for the performance consideration**.
+    pub fn from_file(path: &(impl AsRef<Path> + ?Sized)) -> io::Result<Self> {
         let mut file = File::open(path)?;
         let file_len = file.metadata()?.len();
         file.seek(SeekFrom::Start(0))?;
@@ -389,6 +402,7 @@ impl Wavecar {
         }
     }
 
+    /// Returns the kgrid indices corresponding to coefficients in WAVECAR.
     pub fn generate_fft_grid(&self, ikpoint: u64) -> Vec<Vec<i64>> {
         Self::_generate_fft_grid_specific(
             self.ngrid.clone(),
@@ -470,6 +484,7 @@ impl Wavecar {
                                   t)
     }
 
+    /// Read the coefficients from WAVECAR and return them.
     pub fn read_wavefunction_coeffs(&mut self,
                                     ispin: u64,
                                     ikpoint: u64,

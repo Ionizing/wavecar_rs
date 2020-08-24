@@ -1,3 +1,5 @@
+///! Error handling
+
 use crate::wavecar::WavecarType;
 use std::error::Error;
 use std::fmt;

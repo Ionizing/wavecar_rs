@@ -167,6 +167,9 @@ impl Wavecar {
         irfft3(wavefun_in_kspace, (ngx, ngy, ngz))
     }
 
+    /// Transform the k-space wavefunction into real-space wavefunction.
+    ///
+    /// A grid size is needed
     pub fn get_wavefunction_in_realspace(&mut self,
                                          ispin: u64,
                                          ikpoint: u64,
@@ -216,6 +219,7 @@ impl Wavecar {
         )
     }
 
+    /// An alias of `get_wavefunction_in_realspace` but with default 2x grid size supplied.
     pub fn get_wavefunction_in_realspace_default_ngrid(&mut self,
                                                        ispin: u64,
                                                        ikpoint: u64,
