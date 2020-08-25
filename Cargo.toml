@@ -10,6 +10,9 @@ repository = "https://github.com/Ionizing/Wavecar_rs"
 readme = "README.md"
 exclude = ["tests/*"]
 
+[package.metadata.docs.rs]
+targets = []
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
