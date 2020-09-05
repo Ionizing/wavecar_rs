@@ -54,7 +54,7 @@ impl fmt::Display for WavecarType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let description = match self {
             WavecarType::Standard => "Standard",
-            WavecarType::SpinOrbitCoupling => "SpinOrbitCouplint",
+            WavecarType::SpinOrbitCoupling => "SpinOrbitCoupling",
             WavecarType::GammaHalf(GammaHalfDirection::X) => "GammaX",
             WavecarType::GammaHalf(GammaHalfDirection::Z) => "GammaZ",
         };
