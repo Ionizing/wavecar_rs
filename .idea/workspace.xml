@@ -2,10 +2,14 @@
 <project version="4">
   <component name="CargoProjects">
     <cargoProject FILE="$PROJECT_DIR$/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/wav2chg/wav2chg/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/wav2chg/Cargo.toml" />
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c4acbc81-4c31-4229-a4e0-b0373ee695c6" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/wavecar_rs.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/wavecar_rs.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.lock" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -107,11 +111,11 @@
       </method>
     </configuration>
     <list>
-      <item itemvalue="Cargo Command.run" />
-      <item itemvalue="Cargo Command.test" />
       <item itemvalue="Cargo Command.Expand wavecar_rs::wavecar" />
       <item itemvalue="Cargo Command.Test fft::test::test_fft_macro_1d" />
       <item itemvalue="Cargo Command.Test fft::test::test_fft_macro_2d" />
+      <item itemvalue="Cargo Command.run" />
+      <item itemvalue="Cargo Command.test" />
     </list>
     <recent_temporary>
       <list>
