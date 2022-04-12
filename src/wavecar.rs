@@ -289,7 +289,7 @@ impl Wavecar {
         self.check_indices(ispin, ikpoint, iband)?;
         Ok(
             Self::_calc_record_location(ispin, ikpoint, iband,
-                                        self.num_bands, self.num_bands, self.rec_len)
+                                        self.num_kpoints, self.num_bands, self.rec_len)
         )
     }
 
